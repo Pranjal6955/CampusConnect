@@ -502,13 +502,6 @@ export default function MyEvents() {
                   onPress={() => openViewModal(event)}
                   activeOpacity={0.9}
                   className={`mb-4 rounded-2xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
-                  style={{
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 8,
-                    elevation: 4,
-                  }}
                 >
                   {/* Image Placeholder */}
                   <View className="h-40 relative">
@@ -777,10 +770,10 @@ function StudentViewEventModal({
               <View className={`flex-1 p-4 rounded-2xl mr-2 items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
                 style={{
                   shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  elevation: 2,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.03,
+                  shadowRadius: 4,
+                  elevation: 1,
                 }}
               >
                 <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
@@ -789,10 +782,10 @@ function StudentViewEventModal({
               <View className={`flex-1 p-4 rounded-2xl ml-2 items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
                 style={{
                   shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  elevation: 2,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.03,
+                  shadowRadius: 4,
+                  elevation: 1,
                 }}
               >
                 <Text className={`text-2xl font-bold ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
@@ -813,7 +806,7 @@ function StudentViewEventModal({
               {/* Date */}
               <View className="flex-row items-start">
                 <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
-                  <Ionicons name="calendar" size={20} color="#3b82f6" />
+                  <Ionicons name="calendar-number" size={20} color="#3b82f6" />
                 </View>
                 <View className="flex-1">
                   <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Date</Text>
@@ -828,7 +821,7 @@ function StudentViewEventModal({
               {!event.fullDayEvent && (
                 <View className="flex-row items-start mt-4">
                   <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-purple-50"}`}>
-                    <Ionicons name="time" size={20} color="#a855f7" />
+                    <Ionicons name="alarm-outline" size={20} color="#a855f7" />
                   </View>
                   <View className="flex-1">
                     <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Time</Text>
@@ -846,7 +839,7 @@ function StudentViewEventModal({
               {/* Venue */}
               <View className="flex-row items-start mt-4">
                 <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-green-50"}`}>
-                  <Ionicons name="location" size={20} color="#10b981" />
+                  <Ionicons name="map-outline" size={20} color="#10b981" />
                 </View>
                 <View className="flex-1">
                   <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Venue</Text>
@@ -861,7 +854,15 @@ function StudentViewEventModal({
         </ScrollView>
 
         {/* Floating Action Bar */}
-        <View className={`absolute bottom-0 left-0 right-0 p-6 pt-4 border-t ${isDark ? "bg-black border-gray-800" : "bg-white border-gray-100"}`}>
+        <View className={`absolute bottom-0 left-0 right-0 p-6 pt-4 border-t ${isDark ? "bg-black border-gray-800" : "bg-white border-gray-100"}`}
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 5,
+          }}
+        >
           <View className="flex-row space-x-4" style={{ gap: 12 }}>
             <TouchableOpacity
               onPress={() => {
@@ -872,13 +873,13 @@ function StudentViewEventModal({
               style={{
                 backgroundColor: "#0EA5E9",
                 shadowColor: "#0EA5E9",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-                elevation: 8,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+                elevation: 3,
               }}
             >
-              <Ionicons name="qr-code-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
+              <Ionicons name="scan-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
               <Text className="text-white font-bold text-base">Show QR Code</Text>
             </TouchableOpacity>
             <TouchableOpacity

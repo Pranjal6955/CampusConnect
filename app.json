@@ -45,7 +45,7 @@
         }
       ],
       [
-        "expo-barcode-scanner",
+        "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access camera to scan QR codes for event attendance."
         }

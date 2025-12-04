@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../../config/firebase";
-import { getRoleBasedRoute, getUserRole, storeUserRole, storeUserData } from "../../utils/auth";
+import { getRoleBasedRoute, getUserRole, storeUserData, storeUserRole } from "../../utils/auth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -36,47 +36,41 @@ export default function Login() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      const role = await getUserRole(user.uid);
 
-      // Fetch user role and redirect accordingly
-      try {
-        const role = await getUserRole(user.uid);
-        
-        // Store user role and data in AsyncStorage
-        if (role) {
-          await storeUserRole(user.uid, role);
-          // Fetch and store user data
-          const { doc, getDoc } = await import("firebase/firestore");
-          const { db } = await import("../../config/firebase");
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            await storeUserData(userDoc.data());
-          }
-        }
-        
-        const route = getRoleBasedRoute(role);
-        // Ensure students are redirected to the student section
-        if (role === "student") {
-          router.replace("/(student)/events" as any);
-        } else {
-          router.replace(route as any);
-        }
-      } catch (error) {
-        // If user is authenticated but not found in MongoDB, redirect to signup to complete profile
-        // Simplified error handling since UserNotFoundError is not exported
-        if (error && typeof error === 'object' && 'message' in error && (error as any).message === 'User not found') {
-          Alert.alert(
-            "Profile Incomplete",
-            "Please complete your profile to continue.",
-            [
-              {
-                text: "OK",
-                onPress: () => router.replace("/signup"),
-              },
-            ]
-          );
-        } else {
-          throw error;
-        }
+      // If user is authenticated but not found in Firestore, redirect to signup to complete profile
+      if (!role) {
+        Alert.alert(
+          "Profile Incomplete",
+          "Please complete your profile to continue.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/signup"),
+            },
+          ]
+        );
+        return;
+      }
+
+      // Store user role and data
+      await storeUserRole(user.uid, role);
+      // Fetch and store user data
+      const { doc, getDoc } = await import("firebase/firestore");
+      const { db } = await import("../../config/firebase");
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        await storeUserData(userDoc.data());
+      }
+      
+      // Navigate based on role
+      const route = getRoleBasedRoute(role);
+      // Ensure students are redirected to the student section
+      if (role === "student") {
+        router.replace("/(student)/events" as any);
+      } else {
+        router.replace(route as any);
       }
     } catch (error: any) {
       const errorMessage = error?.message || error?.toString() || "An error occurred during login";

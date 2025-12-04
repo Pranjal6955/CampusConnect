@@ -57,6 +57,34 @@ export default function OrganizerLayout() {
         }}
       />
       <Tabs.Screen
+        name="scanner"
+        options={{
+          title: "Scanner",
+          tabBarIcon: ({ color, focused, size }) => (
+            <View
+              style={{
+                width: focused ? 48 : 40,
+                height: focused ? 48 : 40,
+                borderRadius: focused ? 24 : 20,
+                backgroundColor: focused
+                  ? isDark
+                    ? "rgba(14, 165, 233, 0.2)"
+                    : "rgba(14, 165, 233, 0.1)"
+                  : "transparent",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name={focused ? "qr-code" : "qr-code-outline"}
+                size={focused ? 26 : 24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="quick-create"
         options={{
           title: "",
@@ -98,6 +126,34 @@ export default function OrganizerLayout() {
             );
           },
           tabBarIcon: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="attendance"
+        options={{
+          title: "Attendance",
+          tabBarIcon: ({ color, focused, size }) => (
+            <View
+              style={{
+                width: focused ? 48 : 40,
+                height: focused ? 48 : 40,
+                borderRadius: focused ? 24 : 20,
+                backgroundColor: focused
+                  ? isDark
+                    ? "rgba(14, 165, 233, 0.2)"
+                    : "rgba(14, 165, 233, 0.1)"
+                  : "transparent",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name={focused ? "clipboard" : "clipboard-outline"}
+                size={focused ? 26 : 24}
+                color={color}
+              />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen

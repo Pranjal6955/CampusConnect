@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -13,9 +14,8 @@ import {
 } from "react-native";
 import Badge from "../../../components/Badge";
 import QRCodeScanner from "../../../components/QRCodeScanner";
-import { auth, db } from "../../../config/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { Event, getEvent, deleteEvent, markAttendance } from "../../../utils/events";
+import { db } from "../../../config/firebase";
+import { deleteEvent, Event, getEvent, markAttendance } from "../../../utils/events";
 
 interface ParticipantData {
   id: string;
@@ -218,14 +218,6 @@ export default function OrganizerEventDetails() {
             </View>
           )}
 
-          {/* Gradient Overlay */}
-          <View
-            className="absolute inset-0"
-            style={{
-              backgroundColor: "rgba(0,0,0,0.4)"
-            }}
-          />
-
           {/* Back Button */}
           <TouchableOpacity
             onPress={() => router.back()}
@@ -237,11 +229,12 @@ export default function OrganizerEventDetails() {
           >
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
+        </View>
 
-          {/* Title & Category Overlay */}
-          <View className="absolute bottom-0 left-0 right-0 p-6" style={{
-            backgroundColor: "rgba(0,0,0,0.75)"
-          }}>
+        {/* Content Body */}
+        <View className="px-5 py-6">
+          {/* Title & Category */}
+          <View className="mb-6">
             <View className="flex-row items-center flex-wrap mb-3">
               <View className="mr-2 mb-1">
                 <Badge
@@ -249,57 +242,53 @@ export default function OrganizerEventDetails() {
                   style="solid"
                   color="blue"
                   icon="none"
-                  className="shadow-lg"
                 />
               </View>
               {ended && (
-                <View className="ml-2 px-3 py-1 rounded-lg" style={{ backgroundColor: "rgba(239, 68, 68, 0.8)" }}>
-                  <Text className="text-white text-xs font-semibold">Event Ended</Text>
+                <View className="ml-2 px-3 py-1 rounded-lg" style={{ backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)" }}>
+                  <Text className={`text-xs font-semibold ${isDark ? "text-red-400" : "text-red-600"}`}>Event Ended</Text>
                 </View>
               )}
             </View>
-            <Text className="text-3xl font-extrabold text-white leading-tight mb-1" style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 }}>
+            <Text className={`text-3xl font-extrabold leading-tight ${isDark ? "text-white" : "text-gray-900"}`}>
               {event.title}
             </Text>
           </View>
-        </View>
 
-        {/* Content Body */}
-        <View className="px-5 py-6">
           {/* Stats Row */}
           <View className="flex-row justify-between mb-6 gap-3">
-            <View className={`flex-1 p-5 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
+            <View className={`flex-1 p-3 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
               style={{
                 shadowColor: "#0EA5E9",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 12,
-                elevation: 4,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2,
                 borderWidth: 1,
                 borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
               }}
             >
-              <View className="w-12 h-12 rounded-full items-center justify-center mb-2" style={{ backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)" }}>
-                <Ionicons name="people" size={24} color="#0EA5E9" />
+              <View className="w-10 h-10 rounded-full items-center justify-center mb-1.5" style={{ backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)" }}>
+                <Ionicons name="person-add" size={20} color="#0EA5E9" />
               </View>
-              <Text className={`text-3xl font-extrabold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
+              <Text className={`text-2xl font-extrabold mb-0.5 ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
               <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Going</Text>
             </View>
-            <View className={`flex-1 p-5 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
+            <View className={`flex-1 p-3 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
               style={{
                 shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 12,
-                elevation: 4,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2,
                 borderWidth: 1,
                 borderColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(229, 231, 235, 1)",
               }}
             >
-              <View className="w-12 h-12 rounded-full items-center justify-center mb-2" style={{ backgroundColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(243, 244, 246, 1)" }}>
-                <Ionicons name="person-outline" size={24} color={isDark ? "#9ca3af" : "#6b7280"} />
+              <View className="w-10 h-10 rounded-full items-center justify-center mb-1.5" style={{ backgroundColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(243, 244, 246, 1)" }}>
+                <Ionicons name="person-circle-outline" size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
               </View>
-              <Text className={`text-3xl font-extrabold mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
+              <Text className={`text-2xl font-extrabold mb-0.5 ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
               <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Limit</Text>
             </View>
           </View>
@@ -308,15 +297,15 @@ export default function OrganizerEventDetails() {
           <View className={`mb-6 p-5 rounded-xl ${isDark ? "bg-gray-900" : "bg-white"}`}
             style={{
               shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              elevation: 2,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.03,
+              shadowRadius: 4,
+              elevation: 1,
             }}
           >
-            <View className="flex-row items-center mb-4">
+            <View className="flex-row items-center mb-3">
               <View className={`w-10 h-10 rounded-lg items-center justify-center mr-3 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
-                <Ionicons name="information-circle" size={22} color="#3b82f6" />
+                <Ionicons name="document-text-outline" size={22} color="#3b82f6" />
               </View>
               <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>About Event</Text>
             </View>
@@ -329,10 +318,10 @@ export default function OrganizerEventDetails() {
           <View className={`mb-6 rounded-xl ${isDark ? "bg-gray-900" : "bg-white"}`}
             style={{
               shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              elevation: 2,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.03,
+              shadowRadius: 4,
+              elevation: 1,
             }}
           >
             <View className="p-5">
@@ -341,7 +330,7 @@ export default function OrganizerEventDetails() {
               {/* Start Date */}
               <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
                 <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
-                  <Ionicons name="calendar" size={22} color="#3b82f6" />
+                  <Ionicons name="calendar-number" size={22} color="#3b82f6" />
                 </View>
                 <View className="flex-1">
                   <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Start Date</Text>
@@ -354,7 +343,7 @@ export default function OrganizerEventDetails() {
               {/* End Date */}
               <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
                 <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-purple-50"}`}>
-                  <Ionicons name="calendar-outline" size={22} color="#a855f7" />
+                  <Ionicons name="calendar-number-outline" size={22} color="#a855f7" />
                 </View>
                 <View className="flex-1">
                   <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>End Date</Text>
@@ -368,7 +357,7 @@ export default function OrganizerEventDetails() {
               {!event.fullDayEvent && (
                 <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
                   <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-orange-50"}`}>
-                    <Ionicons name="time" size={22} color="#f97316" />
+                    <Ionicons name="alarm-outline" size={22} color="#f97316" />
                   </View>
                   <View className="flex-1">
                     <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Time</Text>
@@ -386,7 +375,7 @@ export default function OrganizerEventDetails() {
               {/* Venue */}
               <View className="flex-row items-start">
                 <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-green-50"}`}>
-                  <Ionicons name="location" size={22} color="#10b981" />
+                  <Ionicons name="map-outline" size={22} color="#10b981" />
                 </View>
                 <View className="flex-1">
                   <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Venue</Text>
@@ -402,17 +391,17 @@ export default function OrganizerEventDetails() {
           <View className={`mb-6 rounded-xl ${isDark ? "bg-gray-900" : "bg-white"}`}
             style={{
               shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              elevation: 2,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.03,
+              shadowRadius: 4,
+              elevation: 1,
             }}
           >
             <View className="p-5">
               <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-row items-center">
                   <View className={`w-10 h-10 rounded-lg items-center justify-center mr-3 ${isDark ? "bg-gray-800" : "bg-indigo-50"}`}>
-                    <Ionicons name="people" size={22} color="#6366f1" />
+                    <Ionicons name="people-outline" size={22} color="#6366f1" />
                   </View>
                   <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
                     Participants ({participants.length})
@@ -491,74 +480,63 @@ export default function OrganizerEventDetails() {
               )}
             </View>
           </View>
+
+          {/* Action Buttons */}
+          <View className="mb-6">
+            <View className="flex-row gap-3">
+              {/* Scan QR Code Button */}
+              <TouchableOpacity
+                onPress={() => setShowQRScanner(true)}
+                activeOpacity={0.8}
+                className="flex-1 py-4 rounded-xl items-center flex-row justify-center"
+                style={{
+                  backgroundColor: "#22c55e",
+                  shadowColor: "#22c55e",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Ionicons name="scan-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+                <Text className="text-white font-bold text-base">Scan QR Code</Text>
+              </TouchableOpacity>
+
+              {/* Edit Button */}
+              <TouchableOpacity
+                onPress={handleEdit}
+                activeOpacity={0.8}
+                className="flex-1 py-4 rounded-xl items-center flex-row justify-center"
+                style={{
+                  backgroundColor: "#0EA5E9",
+                  shadowColor: "#0EA5E9",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Ionicons name="create-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+                <Text className="text-white font-bold text-base">Edit</Text>
+              </TouchableOpacity>
+
+              {/* Delete Button */}
+              <TouchableOpacity
+                onPress={handleDelete}
+                activeOpacity={0.8}
+                className="py-4 px-6 rounded-xl items-center flex-row justify-center"
+                style={{
+                  backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
+                  borderWidth: 1.5,
+                  borderColor: "#ef4444",
+                }}
+              >
+                <Ionicons name="trash" size={22} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-        <View className="h-24" />
       </ScrollView>
-
-      {/* Floating Action Bar */}
-      <View className={`absolute bottom-0 left-0 right-0 p-5 pt-4 ${isDark ? "bg-black" : "bg-white"}`}
-        style={{
-          borderTopWidth: 1,
-          borderTopColor: isDark ? "#374151" : "#e5e7eb",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 10,
-        }}
-      >
-        <View className="flex-row gap-3">
-          {/* Scan QR Code Button */}
-          <TouchableOpacity
-            onPress={() => setShowQRScanner(true)}
-            activeOpacity={0.8}
-            className="flex-1 py-4 rounded-xl items-center flex-row justify-center"
-            style={{
-              backgroundColor: "#22c55e",
-              shadowColor: "#22c55e",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.4,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <Ionicons name="qr-code-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
-            <Text className="text-white font-bold text-base">Scan QR Code</Text>
-          </TouchableOpacity>
-
-          {/* Edit Button */}
-          <TouchableOpacity
-            onPress={handleEdit}
-            activeOpacity={0.8}
-            className="flex-1 py-4 rounded-xl items-center flex-row justify-center"
-            style={{
-              backgroundColor: "#0EA5E9",
-              shadowColor: "#0EA5E9",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.4,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <Ionicons name="create-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
-            <Text className="text-white font-bold text-base">Edit</Text>
-          </TouchableOpacity>
-
-          {/* Delete Button */}
-          <TouchableOpacity
-            onPress={handleDelete}
-            activeOpacity={0.8}
-            className="py-4 px-6 rounded-xl items-center flex-row justify-center"
-            style={{
-              backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
-              borderWidth: 1.5,
-              borderColor: "#ef4444",
-            }}
-          >
-            <Ionicons name="trash-outline" size={22} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
-      </View>
 
       {/* QR Code Scanner */}
       <QRCodeScanner

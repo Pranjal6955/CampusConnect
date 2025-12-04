@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
@@ -32,6 +32,7 @@ import {
 export default function Events() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { editEventId } = useLocalSearchParams<{ editEventId?: string }>();
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,20 +159,40 @@ export default function Events() {
     filterEvents();
   }, [searchQuery, selectedCategory, selectedStatus, events]);
 
+  // Handle editEventId parameter from navigation
+  useEffect(() => {
+    if (editEventId && events.length > 0) {
+      const eventToEdit = events.find(e => e.id === editEventId);
+      if (eventToEdit) {
+        setEditingEvent(eventToEdit);
+        setShowViewModal(false);
+        setShowCreateModal(true);
+        // Clear the parameter from URL
+        router.setParams({ editEventId: undefined });
+      }
+    }
+  }, [editEventId, events]);
+
   const filterEvents = () => {
     let filtered = events;
 
-    if (searchQuery) {
+    // Search filter - search in title, venue, description, and category
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(event =>
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.venue.toLowerCase().includes(searchQuery.toLowerCase())
+        event.title.toLowerCase().includes(query) ||
+        event.venue.toLowerCase().includes(query) ||
+        (event.description && event.description.toLowerCase().includes(query)) ||
+        event.category.toLowerCase().includes(query)
       );
     }
 
+    // Category filter
     if (selectedCategory !== "All") {
       filtered = filtered.filter(event => event.category === selectedCategory);
     }
 
+    // Status filter
     if (selectedStatus !== "All") {
       if (selectedStatus === "Upcoming") {
         filtered = filtered.filter(event => isEventUpcoming(event));
@@ -380,12 +401,23 @@ export default function Events() {
                 placeholder="Search events..."
                 placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                }}
                 className={`flex-1 ml-2 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
                 style={{ height: 36 }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                clearButtonMode="never"
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setSearchQuery("");
+                  }}
+                  activeOpacity={0.7}
+                >
                   <Ionicons name="close-circle" size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
                 </TouchableOpacity>
               )}

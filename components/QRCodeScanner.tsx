@@ -1,28 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Alert, Modal, Platform, Text, TouchableOpacity, View } from "react-native";
 import { isValidQRCode, parseAttendanceQRData } from "../utils/qrcode";
-
-// Dynamic import for barcode scanner to handle native module loading
-let BarCodeScanner: any;
-let BarCodeScanningResult: any;
-let isBarCodeScannerAvailable = false;
-
-// Only try to load the module on native platforms (not web)
-if (Platform.OS !== "web") {
-  try {
-    const barcodeScanner = require("expo-barcode-scanner");
-    if (barcodeScanner && barcodeScanner.BarCodeScanner) {
-      BarCodeScanner = barcodeScanner.BarCodeScanner;
-      BarCodeScanningResult = barcodeScanner.BarCodeScanningResult;
-      isBarCodeScannerAvailable = true;
-    }
-  } catch (error) {
-    // Silently handle - module not available in this environment
-    isBarCodeScannerAvailable = false;
-  }
-}
 
 interface QRCodeScannerProps {
   visible: boolean;
@@ -39,31 +20,20 @@ export default function QRCodeScanner({
 }: QRCodeScannerProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
     if (visible) {
-      requestCameraPermission();
       setScanned(false);
+      // Request permission if not granted
+      if (permission && !permission.granted) {
+        requestPermission();
+      }
     }
-  }, [visible]);
+  }, [visible, permission, requestPermission]);
 
-  const requestCameraPermission = async () => {
-    if (!BarCodeScanner) {
-      setHasPermission(false);
-      return;
-    }
-    try {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-    } catch (error) {
-      console.error("Error requesting camera permission:", error);
-      setHasPermission(false);
-    }
-  };
-
-  const handleBarCodeScanned = ({ data }: BarCodeScanningResult) => {
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
 
     setScanned(true);
@@ -100,7 +70,52 @@ export default function QRCodeScanner({
     });
   };
 
-  if (!isBarCodeScannerAvailable || !BarCodeScanner) {
+  if (!visible) {
+    return null;
+  }
+
+  if (permission === null) {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
+          <Text className={`text-lg ${isDark ? "text-white" : "text-gray-900"}`}>
+            Requesting camera permission...
+          </Text>
+        </View>
+      </Modal>
+    );
+  }
+
+  if (permission.granted === false) {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
+          <Ionicons name="camera-outline" size={64} color={isDark ? "#666" : "#999"} />
+          <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
+            Camera Permission Required
+          </Text>
+          <Text className={`text-center mb-6 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+            Please grant camera permission to scan QR codes
+          </Text>
+          <TouchableOpacity
+            onPress={requestPermission}
+            className="bg-blue-500 px-6 py-3 rounded-lg"
+          >
+            <Text className="text-white font-semibold">Grant Permission</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onClose}
+            className="mt-4 px-6 py-3 rounded-lg"
+            style={{ backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)" }}
+          >
+            <Text className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    );
+  }
+
+  if (Platform.OS === "web") {
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
@@ -109,10 +124,7 @@ export default function QRCodeScanner({
             QR Scanner Not Available
           </Text>
           <Text className={`text-center mb-6 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-            The barcode scanner module is not available. Please rebuild the app after adding the expo-barcode-scanner plugin to app.json.
-          </Text>
-          <Text className={`text-center mb-6 text-sm ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-            Run: npx expo prebuild (for bare workflow) or rebuild the app
+            QR code scanning is not available on web. Please use the mobile app.
           </Text>
           <TouchableOpacity
             onPress={onClose}
@@ -125,50 +137,20 @@ export default function QRCodeScanner({
     );
   }
 
-  if (hasPermission === null) {
-    return (
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-        <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
-          <Text className={`text-lg ${isDark ? "text-white" : "text-gray-900"}`}>
-            Requesting camera permission...
-          </Text>
-        </View>
-      </Modal>
-    );
-  }
-
-  if (hasPermission === false) {
-    return (
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-        <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
-          <Ionicons name="camera-outline" size={64} color={isDark ? "#666" : "#999"} />
-          <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-            Camera Permission Required
-          </Text>
-          <Text className={`text-center mb-6 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-            Please grant camera permission to scan QR codes
-          </Text>
-          <TouchableOpacity
-            onPress={requestCameraPermission}
-            className="bg-blue-500 px-6 py-3 rounded-lg"
-          >
-            <Text className="text-white font-semibold">Grant Permission</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    );
-  }
-
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-900"}`}>
-        <BarCodeScanner
-          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        <CameraView
           style={{ flex: 1 }}
+          facing="back"
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ["qr"],
+          }}
         />
 
         {/* Overlay */}
-        <View className="absolute inset-0 justify-center items-center">
+        <View className="absolute inset-0 justify-center items-center pointer-events-none">
           {/* Scanning Frame */}
           <View
             style={{
@@ -272,4 +254,3 @@ export default function QRCodeScanner({
     </Modal>
   );
 }
-

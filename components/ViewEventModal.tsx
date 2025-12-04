@@ -8,8 +8,8 @@ import {
   View,
   useColorScheme
 } from "react-native";
-import Badge from "./Badge";
 import { Event } from "../utils/events";
+import Badge from "./Badge";
 
 interface ViewEventModalProps {
   visible: boolean;
@@ -89,14 +89,6 @@ export default function ViewEventModal({
               </View>
             )}
 
-            {/* Gradient Overlay */}
-            <View
-              className="absolute inset-0"
-              style={{
-                backgroundColor: "rgba(0,0,0,0.3)"
-              }}
-            />
-
             {/* Close Button */}
             <TouchableOpacity
               onPress={onClose}
@@ -104,9 +96,12 @@ export default function ViewEventModal({
             >
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
+          </View>
 
-            {/* Title & Category Overlay */}
-            <View className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+          {/* Content Body */}
+          <View className="px-6 py-6">
+            {/* Title & Category */}
+            <View className="mb-6">
               <View className="flex-row items-center mb-3">
                 <View className="mr-2">
                   <Badge
@@ -114,7 +109,6 @@ export default function ViewEventModal({
                     style="solid"
                     color="blue"
                     icon="none"
-                    className="shadow-lg"
                   />
                 </View>
                 {event.type === 'free' && (
@@ -123,18 +117,13 @@ export default function ViewEventModal({
                     style="solid"
                     color="green"
                     icon="none"
-                    className="shadow-lg"
                   />
                 )}
               </View>
-              <Text className="text-3xl font-extrabold text-white shadow-sm leading-tight">
+              <Text className={`text-3xl font-extrabold leading-tight ${isDark ? "text-white" : "text-gray-900"}`}>
                 {event.title}
               </Text>
             </View>
-          </View>
-
-          {/* Content Body */}
-          <View className="px-6 py-6">
 
             {/* Stats Row */}
             <View className="flex-row justify-between mb-8">

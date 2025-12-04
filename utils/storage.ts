@@ -1,3 +1,4 @@
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { Platform } from "react-native";
 import { cloudinaryConfig, getCloudinaryUploadUrl } from "../config/cloudinary";
@@ -119,10 +120,23 @@ export async function uploadImageToStorage(
       const fileBlob = await response.blob();
       formData.append('file', fileBlob);
     } else {
-      // For React Native, use the URI directly with proper format
-      // React Native FormData expects { uri, type, name }
+      // Verify the file exists before trying to upload (optional check)
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (!fileInfo.exists) {
+          throw new Error(`File not found at URI: ${uri}`);
+        }
+      } catch (fileError: any) {
+        // If file check fails, log but continue - the upload will fail with a clearer error if file doesn't exist
+        console.warn("Could not verify file existence:", fileError?.message || fileError);
+        // Don't throw here - let the upload attempt proceed and fail naturally if file is missing
+      }
+      
+      // Use the URI exactly as returned by expo-image-picker
+      // On Android, it returns file:// URIs which FormData can handle
+      // On iOS, it returns file:// URIs which also work with FormData
       formData.append('file', {
-        uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+        uri: uri, // Use URI as-is from expo-image-picker
         type: mimeType,
         name: `${publicId}.${fileExtension}`,
       } as any);
