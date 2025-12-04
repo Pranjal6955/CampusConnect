@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.CampusConnect"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +20,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.anonymous.CampusConnect"
     },
     "web": {
       "output": "static",
@@ -37,6 +42,12 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera to scan QR codes for event attendance."
         }
       ]
     ],

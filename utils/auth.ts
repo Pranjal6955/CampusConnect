@@ -18,7 +18,7 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
 }
 export function getRoleBasedRoute(role: UserRole | null): string {
   if (role === "student") {
-    return "/student-home";
+    return "/(student)/events";
   } else if (role === "organizer") {
     return "/(organizer)/events";
   }

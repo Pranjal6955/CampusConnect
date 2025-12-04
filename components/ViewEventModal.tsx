@@ -16,6 +16,7 @@ interface ViewEventModalProps {
   onClose: () => void;
   onEdit: (event: Event) => void;
   onDelete: (event: Event) => void;
+  onScan?: (event: Event) => void;
 }
 
 export default function ViewEventModal({
@@ -24,6 +25,7 @@ export default function ViewEventModal({
   onClose,
   onEdit,
   onDelete,
+  onScan,
 }: ViewEventModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -214,12 +216,24 @@ export default function ViewEventModal({
         {/* Floating Action Bar */}
         <View className={`absolute bottom-0 left-0 right-0 p-6 pt-4 border-t ${isDark ? "bg-black border-gray-800" : "bg-white border-gray-100"}`}>
           <View className="flex-row space-x-4" style={{ gap: 12 }}>
+            {onScan && (
+              <TouchableOpacity
+                onPress={() => {
+                  onClose();
+                  onScan(event);
+                }}
+                className="flex-1 py-4 rounded-2xl items-center flex-row justify-center bg-green-500 shadow-lg shadow-green-500/30"
+              >
+                <Ionicons name="qr-code-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text className="text-white font-bold text-base">Scan QR</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={() => {
                 onClose();
                 onDelete(event);
               }}
-              className={`flex-1 py-4 rounded-2xl items-center flex-row justify-center ${isDark ? "bg-red-900/20" : "bg-red-50"}`}
+              className={`${onScan ? "flex-1" : "flex-1"} py-4 rounded-2xl items-center flex-row justify-center ${isDark ? "bg-red-900/20" : "bg-red-50"}`}
             >
               <Ionicons name="trash-outline" size={20} color="#ef4444" style={{ marginRight: 8 }} />
               <Text className="text-red-500 font-bold text-base">Delete</Text>

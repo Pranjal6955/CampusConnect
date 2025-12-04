@@ -20,6 +20,40 @@ service cloud.firestore {
                     && request.resource.data.organizerId == request.auth.uid;
       
       // Only the event organizer can update/delete their events
+      // But allow students to update participants array and participantCount for registration
+      allow update: if request.auth != null && (
+        // Organizer can update all fields
+        resource.data.organizerId == request.auth.uid ||
+        // Students can only update participants and participantCount
+        // Ensure only these fields are being changed
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'participantCount', 'updatedAt']) &&
+         // Ensure participants is a list
+         request.resource.data.participants is list &&
+         // Ensure participantCount is an int
+         request.resource.data.participantCount is int &&
+         // Ensure other important fields remain unchanged
+         request.resource.data.organizerId == resource.data.organizerId &&
+         request.resource.data.title == resource.data.title &&
+         request.resource.data.startDate == resource.data.startDate &&
+         request.resource.data.endDate == resource.data.endDate &&
+         request.resource.data.venue == resource.data.venue &&
+         request.resource.data.participantLimit == resource.data.participantLimit)
+      );
+      
+      allow delete: if request.auth != null 
+                    && resource.data.organizerId == request.auth.uid;
+    }
+    
+    // Attendance collection
+    match /attendance/{attendanceId} {
+      // Organizers can read attendance for their events
+      allow read: if request.auth != null;
+      
+      // Only organizers can create attendance records for their events
+      allow create: if request.auth != null 
+                    && request.resource.data.organizerId == request.auth.uid;
+      
+      // Organizers can update/delete attendance for their events
       allow update, delete: if request.auth != null 
                             && resource.data.organizerId == request.auth.uid;
     }

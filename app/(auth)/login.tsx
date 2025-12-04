@@ -41,7 +41,12 @@ export default function Login() {
       try {
         const role = await getUserRole(user.uid);
         const route = getRoleBasedRoute(role);
-        router.replace(route as any);
+        // Ensure students are redirected to the student section
+        if (role === "student") {
+          router.replace("/(student)/events" as any);
+        } else {
+          router.replace(route as any);
+        }
       } catch (error) {
         // If user is authenticated but not found in MongoDB, redirect to signup to complete profile
         // Simplified error handling since UserNotFoundError is not exported

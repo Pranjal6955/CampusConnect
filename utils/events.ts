@@ -135,9 +135,11 @@ export async function getOrganizerEvents(organizerId: string): Promise<Event[]> 
     const events: Event[] = [];
 
     querySnapshot.forEach((doc) => {
+      const data = doc.data();
       events.push({
         id: doc.id,
-        ...doc.data(),
+        ...data,
+        participants: data.participants || [], // Ensure participants is always an array
       } as Event);
     });
 
@@ -155,9 +157,11 @@ export async function getEvent(eventId: string): Promise<Event | null> {
   try {
     const eventDoc = await getDoc(doc(db, "events", eventId));
     if (eventDoc.exists()) {
+      const data = eventDoc.data();
       return {
         id: eventDoc.id,
-        ...eventDoc.data(),
+        ...data,
+        participants: data.participants || [], // Ensure participants is always an array
       } as Event;
     }
     return null;
@@ -220,6 +224,201 @@ export async function deleteEvent(eventId: string, imageUrl: string): Promise<vo
   } catch (error) {
     console.error("Error deleting event:", error);
     throw error;
+  }
+}
+
+// Get all events (for students to browse)
+export async function getAllEvents(): Promise<Event[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, "events"));
+    const events: Event[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      events.push({
+        id: doc.id,
+        ...data,
+        participants: data.participants || [], // Ensure participants is always an array
+      } as Event);
+    });
+
+    return events.sort((a, b) => 
+      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    throw error;
+  }
+}
+
+// Register for an event
+export async function registerForEvent(eventId: string, studentId: string): Promise<void> {
+  try {
+    const eventRef = doc(db, "events", eventId);
+    const eventDoc = await getDoc(eventRef);
+
+    if (!eventDoc.exists()) {
+      throw new Error("Event not found");
+    }
+
+    const eventData = eventDoc.data() as Event;
+    const participants = eventData.participants || []; // Ensure participants is always an array
+    
+    // Check if already registered
+    if (participants.includes(studentId)) {
+      throw new Error("Already registered for this event");
+    }
+
+    // Check if event is full
+    if (eventData.participantCount >= eventData.participantLimit) {
+      throw new Error("Event is full");
+    }
+
+    // Add student to participants and increment count
+    await updateDoc(eventRef, {
+      participants: [...participants, studentId],
+      participantCount: (eventData.participantCount || 0) + 1,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error registering for event:", error);
+    throw error;
+  }
+}
+
+// Unregister from an event
+export async function unregisterFromEvent(eventId: string, studentId: string): Promise<void> {
+  try {
+    const eventRef = doc(db, "events", eventId);
+    const eventDoc = await getDoc(eventRef);
+
+    if (!eventDoc.exists()) {
+      throw new Error("Event not found");
+    }
+
+    const eventData = eventDoc.data() as Event;
+    const participants = eventData.participants || []; // Ensure participants is always an array
+    
+    // Check if registered
+    if (!participants.includes(studentId)) {
+      throw new Error("Not registered for this event");
+    }
+
+    // Remove student from participants and decrement count
+    await updateDoc(eventRef, {
+      participants: participants.filter((id) => id !== studentId),
+      participantCount: Math.max(0, (eventData.participantCount || 0) - 1),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error unregistering from event:", error);
+    throw error;
+  }
+}
+
+// Get events a student is registered for
+export async function getStudentEvents(studentId: string): Promise<Event[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, "events"));
+    const events: Event[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const eventData = doc.data() as Event;
+      const participants = eventData.participants || []; // Ensure participants is always an array
+      if (participants.includes(studentId)) {
+        events.push({
+          id: doc.id,
+          ...eventData,
+          participants: participants, // Ensure participants is set
+        } as Event);
+      }
+    });
+
+    return events.sort((a, b) => 
+      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
+  } catch (error) {
+    console.error("Error fetching student events:", error);
+    throw error;
+  }
+}
+
+// Mark attendance for a student at an event
+export async function markAttendance(eventId: string, studentId: string): Promise<void> {
+  try {
+    const eventRef = doc(db, "events", eventId);
+    const eventDoc = await getDoc(eventRef);
+
+    if (!eventDoc.exists()) {
+      throw new Error("Event not found");
+    }
+
+    const eventData = eventDoc.data() as Event;
+    const participants = eventData.participants || [];
+
+    // Check if student is registered for the event
+    if (!participants.includes(studentId)) {
+      throw new Error("Student is not registered for this event");
+    }
+
+    // Check if attendance already marked
+    const attendanceRef = doc(db, "attendance", `${eventId}_${studentId}`);
+    const attendanceDoc = await getDoc(attendanceRef);
+
+    if (attendanceDoc.exists()) {
+      throw new Error("Attendance already marked");
+    }
+
+    // Mark attendance
+    await addDoc(collection(db, "attendance"), {
+      eventId,
+      studentId,
+      markedAt: new Date().toISOString(),
+      organizerId: eventData.organizerId,
+    });
+  } catch (error) {
+    console.error("Error marking attendance:", error);
+    throw error;
+  }
+}
+
+// Get attendance for an event
+export async function getEventAttendance(eventId: string): Promise<Array<{ studentId: string; markedAt: string }>> {
+  try {
+    const q = query(collection(db, "attendance"), where("eventId", "==", eventId));
+    const querySnapshot = await getDocs(q);
+    const attendance: Array<{ studentId: string; markedAt: string }> = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      attendance.push({
+        studentId: data.studentId,
+        markedAt: data.markedAt,
+      });
+    });
+
+    return attendance.sort((a, b) => 
+      new Date(b.markedAt).getTime() - new Date(a.markedAt).getTime()
+    );
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    throw error;
+  }
+}
+
+// Check if a student's attendance is marked
+export async function isAttendanceMarked(eventId: string, studentId: string): Promise<boolean> {
+  try {
+    const q = query(
+      collection(db, "attendance"),
+      where("eventId", "==", eventId),
+      where("studentId", "==", studentId)
+    );
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error("Error checking attendance:", error);
+    return false;
   }
 }
 

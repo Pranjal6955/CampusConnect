@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
@@ -14,18 +14,10 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import CreateEventModal from "../../components/CreateEventModal";
-import QRCodeScanner from "../../components/QRCodeScanner";
-import ViewEventModal from "../../components/ViewEventModal";
 import { auth, db } from "../../config/firebase";
 import {
   Event,
-  EventFormData,
-  createEvent,
-  deleteEvent,
-  getOrganizerEvents,
-  markAttendance,
-  updateEvent,
+  getAllEvents,
 } from "../../utils/events";
 
 export default function Events() {
@@ -35,18 +27,11 @@ export default function Events() {
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [showQRScanner, setShowQRScanner] = useState(false);
-  const [scanningEventId, setScanningEventId] = useState<string | null>(null);
 
-  const organizerId = auth.currentUser?.uid || "";
+  const studentId = auth.currentUser?.uid || "";
 
   const categories = ["All", "Club Event", "Seminar", "Sports", "Cultural", "Workshop", "Fest", "Hackathon"];
 
@@ -64,7 +49,8 @@ export default function Events() {
   };
 
   // Convert 24-hour format (HH:MM) to 12-hour format with AM/PM
-  const formatTimeTo12Hour = (time24: string): string => {
+  const formatTimeTo12Hour = (time24: string | undefined): string => {
+    if (!time24) return "";
     const [hours, minutes] = time24.split(":").map(Number);
     const period = hours >= 12 ? "PM" : "AM";
     const hours12 = hours % 12 || 12;
@@ -88,6 +74,12 @@ export default function Events() {
     filterEvents();
   }, [searchQuery, selectedCategory, events]);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [])
+  );
+
   const filterEvents = () => {
     let filtered = events;
 
@@ -105,21 +97,6 @@ export default function Events() {
     setFilteredEvents(filtered);
   };
 
-  // Check if we should open the modal (from quick-create button)
-  useFocusEffect(
-    useCallback(() => {
-      const timer = setTimeout(() => {
-        const shouldOpen = (global as any).__openEventModal;
-        if (shouldOpen) {
-          setEditingEvent(null);
-          setShowCreateModal(true);
-          (global as any).__openEventModal = false;
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }, [])
-  );
-
   const loadUserData = async () => {
     try {
       const user = auth.currentUser;
@@ -136,8 +113,8 @@ export default function Events() {
 
   const loadEvents = async () => {
     try {
-      const organizerEvents = await getOrganizerEvents(organizerId);
-      setEvents(organizerEvents);
+      const allEvents = await getAllEvents();
+      setEvents(allEvents);
     } catch (error) {
       Alert.alert("Error", "Failed to load events");
       console.error(error);
@@ -152,95 +129,13 @@ export default function Events() {
     loadEvents();
   }, []);
 
-  const openCreateModal = () => {
-    setEditingEvent(null);
-    setShowCreateModal(true);
+  const openEventDetails = (event: Event) => {
+    router.push(`/(student)/events/${event.id}` as any);
   };
 
-  const openViewModal = (event: Event) => {
-    setViewingEvent(event);
-    setShowViewModal(true);
-  };
 
-  const openEditModal = (event: Event) => {
-    setEditingEvent(event);
-    setShowViewModal(false);
-    setShowCreateModal(true);
-  };
-
-  const closeViewModal = () => {
-    setShowViewModal(false);
-    setViewingEvent(null);
-  };
-
-  const handleModalSubmit = async (formData: EventFormData) => {
-    setFormLoading(true);
-    try {
-      if (editingEvent) {
-        await updateEvent(editingEvent.id, formData, editingEvent.imageUrl);
-        Alert.alert("Success", "Event updated successfully");
-      } else {
-        await createEvent(organizerId, formData);
-        Alert.alert("Success", "Event created successfully");
-      }
-
-      setShowCreateModal(false);
-      setEditingEvent(null);
-      loadEvents();
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save event");
-      throw error;
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleCloseModal = () => {
-    setShowCreateModal(false);
-    setEditingEvent(null);
-  };
-
-  const handleDelete = (event: Event) => {
-    Alert.alert(
-      "Delete Event",
-      `Are you sure you want to delete "${event.title}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteEvent(event.id, event.imageUrl);
-              Alert.alert("Success", "Event deleted successfully");
-              loadEvents();
-              setShowViewModal(false);
-              setViewingEvent(null);
-            } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to delete event");
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleOpenScanner = (event: Event) => {
-    setScanningEventId(event.id);
-    setShowViewModal(false);
-    setShowQRScanner(true);
-  };
-
-  const handleQRScan = async (data: { eventId: string; studentId: string }) => {
-    try {
-      await markAttendance(data.eventId, data.studentId);
-      Alert.alert("Success", "Attendance marked successfully!");
-      setShowQRScanner(false);
-      setScanningEventId(null);
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to mark attendance");
-      // Keep scanner open on error
-    }
+  const isRegistered = (event: Event) => {
+    return event.participants && Array.isArray(event.participants) && event.participants.includes(studentId);
   };
 
   if (loading) {
@@ -263,56 +158,42 @@ export default function Events() {
       >
         {/* Header Section */}
         <View className="px-5 pt-16 pb-6">
-          <View className="flex-row justify-between items-center mb-6">
-            <View>
-              <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                Welcome back,
-              </Text>
-              <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                {userData?.organizationName || "Organizer"}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={openCreateModal}
-              className={`w-12 h-12 rounded-full items-center justify-center ${isDark ? "bg-gray-800" : "bg-white"
-                }`}
-              style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <Ionicons name="add" size={24} color="#0EA5E9" />
-            </TouchableOpacity>
+          <View className="mb-6">
+            <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+              Welcome back,
+            </Text>
+            <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+              {userData?.name || userData?.firstName || "Student"}
+            </Text>
           </View>
 
           {/* Search Bar */}
           <View className="mb-6">
             <View
-              className={`flex-row items-center px-4 py-2.5 rounded-xl ${isDark ? "bg-gray-900" : "bg-white"
+              className={`flex-row items-center px-5 py-3.5 rounded-2xl ${isDark ? "bg-gray-900" : "bg-white"
                 }`}
               style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
+                shadowColor: "#0EA5E9",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 3,
+                borderWidth: 1,
+                borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
               }}
             >
-              <Ionicons name="search" size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
+              <Ionicons name="search" size={20} color="#0EA5E9" />
               <TextInput
                 placeholder="Search events..."
                 placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                className={`flex-1 ml-2 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
-                style={{ height: 40 }}
+                className={`flex-1 ml-3 text-base ${isDark ? "text-white" : "text-gray-900"}`}
+                style={{ height: 44 }}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={16} color={isDark ? "#6b7280" : "#9ca3af"} />
+                  <Ionicons name="close-circle" size={20} color={isDark ? "#6b7280" : "#9ca3af"} />
                 </TouchableOpacity>
               )}
             </View>
@@ -329,22 +210,31 @@ export default function Events() {
               <TouchableOpacity
                 key={category}
                 onPress={() => setSelectedCategory(category)}
-                className={`px-5 py-2.5 rounded-full mr-3 ${selectedCategory === category
-                  ? "bg-sky-500"
+                className={`px-6 py-3 rounded-full mr-3 ${selectedCategory === category
+                  ? ""
                   : isDark
                     ? "bg-gray-900"
                     : "bg-white"
                   }`}
-                style={{
-                  shadowColor: selectedCategory === category ? "#0EA5E9" : "#000",
+                style={selectedCategory === category ? {
+                  backgroundColor: "#0EA5E9",
+                  shadowColor: "#0EA5E9",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 8,
+                  elevation: 6,
+                } : {
+                  shadowColor: "#000",
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: selectedCategory === category ? 0.3 : 0.05,
+                  shadowOpacity: 0.05,
                   shadowRadius: 4,
-                  elevation: selectedCategory === category ? 4 : 2,
+                  elevation: 2,
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.1)",
                 }}
               >
                 <Text
-                  className={`font-semibold ${selectedCategory === category
+                  className={`font-bold text-sm ${selectedCategory === category
                     ? "text-white"
                     : isDark
                       ? "text-gray-400"
@@ -362,7 +252,7 @@ export default function Events() {
         <View className="px-5">
           <View className="flex-row items-center justify-between mb-4">
             <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              Upcoming Events
+              All Events
             </Text>
             <Text className={`text-sm font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
               {filteredEvents.length} found
@@ -381,24 +271,28 @@ export default function Events() {
               <Text className={`text-center px-10 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
                 {searchQuery || selectedCategory !== "All"
                   ? "Try adjusting your search or filters"
-                  : "Create your first event to get started!"}
+                  : "No events available at the moment"}
               </Text>
             </View>
           ) : (
             filteredEvents.map((event) => {
               const { day, month } = formatDate(event.startDate);
+              const registered = isRegistered(event);
+              const isFull = event.participantCount >= event.participantLimit;
               return (
                 <TouchableOpacity
                   key={event.id}
-                  onPress={() => openViewModal(event)}
+                  onPress={() => openEventDetails(event)}
                   activeOpacity={0.9}
                   className={`mb-6 rounded-3xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
                   style={{
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 12,
-                    elevation: 5,
+                    shadowColor: "#0EA5E9",
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 16,
+                    elevation: 8,
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.05)",
                   }}
                 >
                   {/* Image Container */}
@@ -417,82 +311,142 @@ export default function Events() {
                     )}
 
                     {/* Date Badge */}
-                    <View className="absolute top-4 left-4 bg-white/90 backdrop-blur-md rounded-2xl px-3 py-2 items-center shadow-sm">
-                      <Text className="text-xs font-bold text-red-500 uppercase">{month}</Text>
-                      <Text className="text-xl font-extrabold text-gray-900">{day}</Text>
+                    <View className="absolute top-4 left-4 rounded-2xl px-4 py-3 items-center"
+                      style={{
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 8,
+                        elevation: 4,
+                      }}
+                    >
+                      <Text className="text-xs font-bold text-red-500 uppercase tracking-wider">{month}</Text>
+                      <Text className="text-2xl font-extrabold text-gray-900">{day}</Text>
                     </View>
 
                     {/* Category Badge */}
-                    <View className="absolute top-4 right-4 flex-row items-center bg-black/60 backdrop-blur-md rounded-full px-3 py-1.5">
-                      <Ionicons name={getCategoryIcon(event.category) as any} size={12} color="#fff" style={{ marginRight: 4 }} />
-                      <Text className="text-xs font-semibold text-white">
+                    <View className="absolute top-4 right-4 flex-row items-center rounded-full px-4 py-2"
+                      style={{
+                        backgroundColor: "rgba(14, 165, 233, 0.9)",
+                        shadowColor: "#0EA5E9",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 6,
+                        elevation: 4,
+                      }}
+                    >
+                      <Ionicons name={getCategoryIcon(event.category) as any} size={14} color="#fff" style={{ marginRight: 6 }} />
+                      <Text className="text-xs font-bold text-white uppercase tracking-wider">
                         {event.category}
                       </Text>
                     </View>
+
+                    {/* Registered Badge */}
+                    {registered && (
+                      <View className="absolute bottom-4 left-4 rounded-full px-4 py-2 flex-row items-center"
+                        style={{
+                          backgroundColor: "rgba(34, 197, 94, 0.95)",
+                          shadowColor: "#22c55e",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 6,
+                          elevation: 4,
+                        }}
+                      >
+                        <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginRight: 6 }} />
+                        <Text className="text-xs font-bold text-white uppercase tracking-wider">Registered</Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* Content */}
-                  <View className="p-5">
+                  <View className="p-6">
                     <Text
                       numberOfLines={2}
-                      className={`text-xl font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}
+                      className={`text-xl font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}
                     >
                       {event.title}
                     </Text>
 
-                    <View className="flex-row items-center mb-2">
-                      <Ionicons name="location-outline" size={16} color="#0EA5E9" style={{ marginRight: 4 }} />
+                    <View className="flex-row items-center mb-3">
+                      <View className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                        style={{
+                          backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                        }}
+                      >
+                        <Ionicons name="location" size={18} color="#0EA5E9" />
+                      </View>
                       <Text
                         numberOfLines={1}
-                        className={`text-sm flex-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                        className={`text-sm flex-1 font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}
                       >
                         {event.venue}
                       </Text>
                     </View>
 
                     <View className="flex-row items-center mb-4">
-                      <Ionicons name="time-outline" size={16} color="#0EA5E9" style={{ marginRight: 4 }} />
+                      <View className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                        style={{
+                          backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                        }}
+                      >
+                        <Ionicons name="time" size={18} color="#0EA5E9" />
+                      </View>
                       <Text
                         numberOfLines={1}
-                        className={`text-sm flex-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                        className={`text-sm flex-1 font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}
                       >
                         {event.startDate === event.endDate
                           ? event.startDate
                           : `${event.startDate} - ${event.endDate}`}
-                        {!event.fullDayEvent && ` • ${formatTimeTo12Hour(event.startTime)}`}
+                        {!event.fullDayEvent && event.startTime && ` • ${formatTimeTo12Hour(event.startTime)}`}
                       </Text>
                     </View>
 
-                    <View className={`h-[1px] w-full mb-4 ${isDark ? "bg-gray-800" : "bg-gray-100"}`} />
+                    <View className={`h-[1px] w-full mb-4 ${isDark ? "bg-gray-800" : "bg-gray-200"}`} />
 
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center">
-                        <View className="flex-row -space-x-2 mr-2">
+                        <View className="flex-row -space-x-2 mr-3">
                           {[1, 2, 3].map((_, i) => (
                             <View
                               key={i}
-                              className={`w-7 h-7 rounded-full border-2 ${isDark ? "border-gray-900 bg-gray-800" : "border-white bg-gray-200"
+                              className={`w-8 h-8 rounded-full border-2 ${isDark ? "border-gray-900 bg-gray-800" : "border-white bg-gray-200"
                                 } items-center justify-center`}
+                              style={{
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 2,
+                                elevation: 2,
+                              }}
                             >
-                              <Ionicons name="person" size={12} color={isDark ? "#9ca3af" : "#6b7280"} />
+                              <Ionicons name="person" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
                             </View>
                           ))}
                         </View>
-                        <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                          +{event.participantCount} Going
-                        </Text>
+                        <View>
+                          <Text className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                            {event.participantCount}/{event.participantLimit}
+                          </Text>
+                          <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                            Participants
+                          </Text>
+                        </View>
                       </View>
 
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          openEditModal(event);
-                        }}
-                        className={`w-10 h-10 rounded-full items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-50"
-                          }`}
-                      >
-                        <Ionicons name="create-outline" size={20} color="#0EA5E9" />
-                      </TouchableOpacity>
+                      {isFull && !registered && (
+                        <View className="px-4 py-2 rounded-full"
+                          style={{
+                            backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
+                            borderWidth: 1,
+                            borderColor: "rgba(239, 68, 68, 0.3)",
+                          }}
+                        >
+                          <Text className="text-xs font-bold text-red-500 uppercase tracking-wider">Full</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -502,35 +456,6 @@ export default function Events() {
         </View>
       </ScrollView>
 
-      {/* View Event Modal */}
-      <ViewEventModal
-        visible={showViewModal}
-        event={viewingEvent}
-        onClose={closeViewModal}
-        onEdit={openEditModal}
-        onDelete={handleDelete}
-        onScan={handleOpenScanner}
-      />
-
-      {/* QR Code Scanner */}
-      <QRCodeScanner
-        visible={showQRScanner}
-        onClose={() => {
-          setShowQRScanner(false);
-          setScanningEventId(null);
-        }}
-        onScan={handleQRScan}
-        eventId={scanningEventId || undefined}
-      />
-
-      {/* Create/Edit Event Modal */}
-      <CreateEventModal
-        visible={showCreateModal}
-        onClose={handleCloseModal}
-        onSubmit={handleModalSubmit}
-        editingEvent={editingEvent}
-        formLoading={formLoading}
-      />
     </View>
   );
 }
