@@ -1,12 +1,13 @@
 import { router } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
+import { useColorScheme } from "nativewind";
 import { useEffect } from "react";
-import { ActivityIndicator, View, useColorScheme } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { auth } from "../config/firebase";
 import { getRoleBasedRoute, getUserRole } from "../utils/auth";
 
 export default function Index() {
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
   useEffect(() => {

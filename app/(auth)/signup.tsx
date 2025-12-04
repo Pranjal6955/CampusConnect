@@ -3,6 +3,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Link, router } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,7 +16,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { auth, db } from "../../config/firebase";
 import { getRoleBasedRoute } from "../../utils/auth";
@@ -38,7 +38,7 @@ export default function Signup() {
   const [organizationName, setOrganizationName] = useState("");
   const [activeTab, setActiveTab] = useState<"signup" | "login">("signup");
   const [loading, setLoading] = useState(false);
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
   const formatDate = (date: Date | null): string => {
@@ -201,9 +201,9 @@ export default function Signup() {
                   elevation: 20,
                 }}
               >
-                <Ionicons 
-                  name="school" 
-                  size={55} 
+                <Ionicons
+                  name="school"
+                  size={55}
                   color="#fff"
                   style={{
                     shadowColor: "#fff",
@@ -521,8 +521,8 @@ export default function Signup() {
                     borderRadius: 12,
                     borderWidth: 2,
                     borderColor: role === "student" ? "#0EA5E9" : (isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"),
-                    backgroundColor: role === "student" 
-                      ? "rgba(14, 165, 233, 0.2)" 
+                    backgroundColor: role === "student"
+                      ? "rgba(14, 165, 233, 0.2)"
                       : (isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)"),
                     alignItems: "center",
                     justifyContent: "center",
@@ -560,8 +560,8 @@ export default function Signup() {
                     borderRadius: 12,
                     borderWidth: 2,
                     borderColor: role === "organizer" ? "#0EA5E9" : (isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"),
-                    backgroundColor: role === "organizer" 
-                      ? "rgba(14, 165, 233, 0.2)" 
+                    backgroundColor: role === "organizer"
+                      ? "rgba(14, 165, 233, 0.2)"
                       : (isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)"),
                     alignItems: "center",
                     justifyContent: "center",

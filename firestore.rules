@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection
+    match /users/{userId} {
+      // Authenticated users can read any user document (needed for role checking)
+      allow read: if request.auth != null;
+      // Users can create/update their own document
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Events collection
+    match /events/{eventId} {
+      // Anyone authenticated can read events
+      allow read: if request.auth != null;
+      
+      // Only organizers can create events
+      allow create: if request.auth != null 
+                    && request.resource.data.organizerId == request.auth.uid;
+      
+      // Only the event organizer can update/delete their events
+      allow update, delete: if request.auth != null 
+                            && resource.data.organizerId == request.auth.uid;
+    }
+    
+    // Default: deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

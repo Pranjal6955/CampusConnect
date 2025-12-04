@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -12,7 +13,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { auth } from "../../config/firebase";
 import { getRoleBasedRoute, getUserRole } from "../../utils/auth";
@@ -23,7 +23,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"signup" | "login">("login");
   const [loading, setLoading] = useState(false);
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
   const handleLogin = async () => {
@@ -36,11 +36,30 @@ export default function Login() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       // Fetch user role and redirect accordingly
-      const role = await getUserRole(user.uid);
-      const route = getRoleBasedRoute(role);
-      router.replace(route as any);
+      try {
+        const role = await getUserRole(user.uid);
+        const route = getRoleBasedRoute(role);
+        router.replace(route as any);
+      } catch (error) {
+        // If user is authenticated but not found in MongoDB, redirect to signup to complete profile
+        // Simplified error handling since UserNotFoundError is not exported
+        if (error && typeof error === 'object' && 'message' in error && (error as any).message === 'User not found') {
+          Alert.alert(
+            "Profile Incomplete",
+            "Please complete your profile to continue.",
+            [
+              {
+                text: "OK",
+                onPress: () => router.replace("/signup"),
+              },
+            ]
+          );
+        } else {
+          throw error;
+        }
+      }
     } catch (error: any) {
       const errorMessage = error?.message || error?.toString() || "An error occurred during login";
       Alert.alert("Login Failed", errorMessage);
@@ -106,9 +125,9 @@ export default function Login() {
                   elevation: 20,
                 }}
               >
-                <Ionicons 
-                  name="school" 
-                  size={55} 
+                <Ionicons
+                  name="school"
+                  size={55}
                   color="#fff"
                   style={{
                     shadowColor: "#fff",

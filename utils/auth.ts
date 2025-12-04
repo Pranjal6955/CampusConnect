@@ -20,7 +20,7 @@ export function getRoleBasedRoute(role: UserRole | null): string {
   if (role === "student") {
     return "/student-home";
   } else if (role === "organizer") {
-    return "/organizer-home";
+    return "/(organizer)/events";
   }
   return "/login";
 }
