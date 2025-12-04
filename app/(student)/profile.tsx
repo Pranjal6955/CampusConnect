@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import Badge from "../../components/Badge";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import EditProfileModal from "../../components/EditProfileModal";
 import { auth, db } from "../../config/firebase";
@@ -219,9 +220,14 @@ export default function Profile() {
                         {userData?.email || auth.currentUser?.email}
                     </Text>
                     {userData?.studentId && (
-                        <Text className={`text-sm mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                            Student ID: {userData.studentId}
-                        </Text>
+                        <View className="mt-2">
+                            <Badge
+                                label={`Student ID: ${userData.studentId}`}
+                                style="filled"
+                                color="blue"
+                                icon="none"
+                            />
+                        </View>
                     )}
                 </View>
 

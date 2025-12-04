@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import Badge from "../../components/Badge";
 import CreateEventModal from "../../components/CreateEventModal";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import ViewEventModal from "../../components/ViewEventModal";
@@ -423,11 +424,14 @@ export default function Events() {
                     </View>
 
                     {/* Category Badge */}
-                    <View className="absolute top-4 right-4 flex-row items-center bg-black/60 backdrop-blur-md rounded-full px-3 py-1.5">
-                      <Ionicons name={getCategoryIcon(event.category) as any} size={12} color="#fff" style={{ marginRight: 4 }} />
-                      <Text className="text-xs font-semibold text-white">
-                        {event.category}
-                      </Text>
+                    <View className="absolute top-4 right-4">
+                      <Badge
+                        label={event.category}
+                        style="solid"
+                        color="blue"
+                        icon="none"
+                        className="shadow-lg"
+                      />
                     </View>
                   </View>
 

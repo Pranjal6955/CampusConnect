@@ -113,9 +113,9 @@ export default function StudentLayout() {
         }}
       />
       <Tabs.Screen
-        name="student-home"
+        name="events/[id]"
         options={{
-          href: null, // Hide from tab bar
+          href: null,
         }}
       />
     </Tabs>

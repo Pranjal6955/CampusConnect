@@ -8,6 +8,7 @@ import {
   View,
   useColorScheme
 } from "react-native";
+import Badge from "./Badge";
 import { Event } from "../utils/events";
 
 interface ViewEventModalProps {
@@ -107,16 +108,23 @@ export default function ViewEventModal({
             {/* Title & Category Overlay */}
             <View className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
               <View className="flex-row items-center mb-3">
-                <View className="px-3 py-1 rounded-full bg-blue-500/80 backdrop-blur-md flex-row items-center">
-                  <Ionicons name={getCategoryIcon(event.category) as any} size={12} color="#fff" style={{ marginRight: 4 }} />
-                  <Text className="text-white text-xs font-bold uppercase tracking-wider">
-                    {event.category}
-                  </Text>
+                <View className="mr-2">
+                  <Badge
+                    label={event.category}
+                    style="solid"
+                    color="blue"
+                    icon="none"
+                    className="shadow-lg"
+                  />
                 </View>
                 {event.type === 'free' && (
-                  <View className="ml-2 px-3 py-1 rounded-full bg-green-500/80 backdrop-blur-md">
-                    <Text className="text-white text-xs font-bold uppercase tracking-wider">Free</Text>
-                  </View>
+                  <Badge
+                    label="Free"
+                    style="solid"
+                    color="green"
+                    icon="none"
+                    className="shadow-lg"
+                  />
                 )}
               </View>
               <Text className="text-3xl font-extrabold text-white shadow-sm leading-tight">
