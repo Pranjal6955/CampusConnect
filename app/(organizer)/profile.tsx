@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
+import { clearAuthStorage } from "../../utils/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
@@ -97,6 +98,7 @@ export default function Profile() {
                 onPress: async () => {
                     try {
                         await signOut(auth);
+                        await clearAuthStorage();
                         router.replace("/(auth)/login");
                     } catch (error) {
                         console.error("Error signing out:", error);

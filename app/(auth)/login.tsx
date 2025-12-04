@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../../config/firebase";
-import { getRoleBasedRoute, getUserRole } from "../../utils/auth";
+import { getRoleBasedRoute, getUserRole, storeUserRole, storeUserData } from "../../utils/auth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -40,6 +40,19 @@ export default function Login() {
       // Fetch user role and redirect accordingly
       try {
         const role = await getUserRole(user.uid);
+        
+        // Store user role and data in AsyncStorage
+        if (role) {
+          await storeUserRole(user.uid, role);
+          // Fetch and store user data
+          const { doc, getDoc } = await import("firebase/firestore");
+          const { db } = await import("../../config/firebase");
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            await storeUserData(userDoc.data());
+          }
+        }
+        
         const route = getRoleBasedRoute(role);
         // Ensure students are redirected to the student section
         if (role === "student") {

@@ -1,19 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
-import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, Platform, Text, TouchableOpacity, View } from "react-native";
 import { isValidQRCode, parseAttendanceQRData } from "../utils/qrcode";
 
 // Dynamic import for barcode scanner to handle native module loading
 let BarCodeScanner: any;
 let BarCodeScanningResult: any;
+let isBarCodeScannerAvailable = false;
 
-try {
-  const barcodeScanner = require("expo-barcode-scanner");
-  BarCodeScanner = barcodeScanner.BarCodeScanner;
-  BarCodeScanningResult = barcodeScanner.BarCodeScanningResult;
-} catch (error) {
-  console.warn("expo-barcode-scanner not available:", error);
+// Only try to load the module on native platforms (not web)
+if (Platform.OS !== "web") {
+  try {
+    const barcodeScanner = require("expo-barcode-scanner");
+    if (barcodeScanner && barcodeScanner.BarCodeScanner) {
+      BarCodeScanner = barcodeScanner.BarCodeScanner;
+      BarCodeScanningResult = barcodeScanner.BarCodeScanningResult;
+      isBarCodeScannerAvailable = true;
+    }
+  } catch (error) {
+    // Silently handle - module not available in this environment
+    isBarCodeScannerAvailable = false;
+  }
 }
 
 interface QRCodeScannerProps {
@@ -92,7 +100,7 @@ export default function QRCodeScanner({
     });
   };
 
-  if (!BarCodeScanner) {
+  if (!isBarCodeScannerAvailable || !BarCodeScanner) {
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>

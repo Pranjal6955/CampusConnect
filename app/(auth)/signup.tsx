@@ -18,7 +18,7 @@ import {
   View,
 } from "react-native";
 import { auth, db } from "../../config/firebase";
-import { getRoleBasedRoute } from "../../utils/auth";
+import { getRoleBasedRoute, storeUserRole, storeUserData } from "../../utils/auth";
 
 type UserRole = "student" | "organizer";
 
@@ -95,8 +95,8 @@ export default function Signup() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save user data to Firestore with role
-      await setDoc(doc(db, "users", user.uid), {
+      // Prepare user data
+      const userData = {
         ...(role === "student" && {
           firstName,
           lastName,
@@ -112,7 +112,14 @@ export default function Signup() {
         email,
         role,
         createdAt: new Date().toISOString(),
-      });
+      };
+
+      // Save user data to Firestore with role
+      await setDoc(doc(db, "users", user.uid), userData);
+
+      // Store user role and data in AsyncStorage
+      await storeUserRole(user.uid, role);
+      await storeUserData(userData);
 
       // Redirect based on role
       const redirectPath = getRoleBasedRoute(role);

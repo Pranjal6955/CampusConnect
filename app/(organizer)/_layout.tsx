@@ -128,6 +128,12 @@ export default function OrganizerLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="events/[id]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
