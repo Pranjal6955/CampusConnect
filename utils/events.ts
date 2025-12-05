@@ -10,6 +10,21 @@ import {
   where
 } from "firebase/firestore";
 import { db } from "../config/firebase";
+import {
+  cancelEventReminders,
+  notifyAttendanceMarked,
+  notifyEventAnnouncement,
+  notifyEventCancelled,
+  notifyEventSuggestion,
+  notifyEventUpdate,
+  notifyLowSeats,
+  notifyOrganizerLowAttendance,
+  notifyOrganizerSoldOut,
+  notifyRSVPConfirmation,
+  scheduleEventLiveNotification,
+  scheduleEventReminders,
+  schedulePostEventFeedback,
+} from "./notifications";
 import { deleteImageFromStorage, uploadImageWithPath } from "./storage";
 
 export type EventType = "free" | "paid";
@@ -120,6 +135,17 @@ export async function createEvent(
     };
 
     await addDoc(collection(db, "events"), eventData);
+    
+    // Send event announcement notification to all students
+    const createdEvent: Event = {
+      id: eventId,
+      ...eventData,
+      participants: [],
+    } as Event;
+    notifyEventAnnouncement(createdEvent).catch((err) => 
+      console.error("Error sending event announcement notification:", err)
+    );
+    
     return eventId;
   } catch (error) {
     console.error("Error creating event:", error);
@@ -178,6 +204,10 @@ export async function updateEvent(
   existingImageUrl?: string
 ): Promise<void> {
   try {
+    // Get existing event data to compare changes
+    const existingEventDoc = await getDoc(doc(db, "events", eventId));
+    const existingEvent = existingEventDoc.data() as Event;
+    
     let imageUrl = existingImageUrl || "";
 
     // Upload new image if provided
@@ -190,6 +220,24 @@ export async function updateEvent(
     }
 
     const eventRef = doc(db, "events", eventId);
+    const changes: { field: string; oldValue: any; newValue: any }[] = [];
+    
+    // Track changes
+    if (existingEvent.venue !== formData.venue) {
+      changes.push({ field: "venue", oldValue: existingEvent.venue, newValue: formData.venue });
+    }
+    if (existingEvent.startDate !== formatDate(formData.startDate) || 
+        existingEvent.startTime !== formatTime(formData.startTime)) {
+      changes.push({ 
+        field: "startTime", 
+        oldValue: `${existingEvent.startDate} ${existingEvent.startTime}`, 
+        newValue: `${formatDate(formData.startDate)} ${formatTime(formData.startTime)}` 
+      });
+    }
+    if (existingEvent.title !== formData.title) {
+      changes.push({ field: "title", oldValue: existingEvent.title, newValue: formData.title });
+    }
+
     await updateDoc(eventRef, {
       imageUrl,
       title: formData.title,
@@ -205,6 +253,16 @@ export async function updateEvent(
       participantLimit: formData.participantLimit,
       updatedAt: new Date().toISOString(),
     });
+
+    // Send update notification if there are changes
+    if (changes.length > 0) {
+      const updatedEvent = await getEvent(eventId);
+      if (updatedEvent) {
+        notifyEventUpdate(updatedEvent, changes).catch((err) =>
+          console.error("Error sending event update notification:", err)
+        );
+      }
+    }
   } catch (error) {
     console.error("Error updating event:", error);
     throw error;
@@ -214,6 +272,10 @@ export async function updateEvent(
 // Delete event
 export async function deleteEvent(eventId: string, imageUrl: string): Promise<void> {
   try {
+    // Get event data before deleting to send cancellation notification
+    const eventDoc = await getDoc(doc(db, "events", eventId));
+    const eventData = eventDoc.exists() ? (eventDoc.data() as Event) : null;
+
     // Delete image from storage
     if (imageUrl) {
       await deleteImage(imageUrl);
@@ -221,6 +283,26 @@ export async function deleteEvent(eventId: string, imageUrl: string): Promise<vo
 
     // Delete event document
     await deleteDoc(doc(db, "events", eventId));
+
+    // Send cancellation notification if event existed
+    if (eventData) {
+      const { id: _, ...eventDataWithoutId } = eventData;
+      const event: Event = {
+        id: eventId,
+        ...eventDataWithoutId,
+      };
+      notifyEventCancelled(event).catch((err) =>
+        console.error("Error sending event cancelled notification:", err)
+      );
+
+      // Cancel all scheduled notifications for all participants
+      const participants = eventData.participants || [];
+      for (const participantId of participants) {
+        cancelEventReminders(eventId, participantId).catch((err) =>
+          console.error("Error cancelling reminders for participant:", err)
+        );
+      }
+    }
   } catch (error) {
     console.error("Error deleting event:", error);
     throw error;
@@ -274,12 +356,58 @@ export async function registerForEvent(eventId: string, studentId: string): Prom
       throw new Error("Event is full");
     }
 
+    const newParticipantCount = (eventData.participantCount || 0) + 1;
+    const remainingSeats = eventData.participantLimit - newParticipantCount;
+
     // Add student to participants and increment count
     await updateDoc(eventRef, {
       participants: [...participants, studentId],
-      participantCount: (eventData.participantCount || 0) + 1,
+      participantCount: newParticipantCount,
       updatedAt: new Date().toISOString(),
     });
+
+    // Get updated event for notifications
+    const { id: _, ...eventDataWithoutId } = eventData;
+    const updatedEvent: Event = {
+      id: eventId,
+      ...eventDataWithoutId,
+      participants: [...participants, studentId],
+      participantCount: newParticipantCount,
+    };
+
+    // Send RSVP confirmation notification
+    notifyRSVPConfirmation(updatedEvent, studentId).catch((err) =>
+      console.error("Error sending RSVP confirmation notification:", err)
+    );
+
+    // Schedule event reminders (24h and 1h before)
+    scheduleEventReminders(updatedEvent, studentId).catch((err) =>
+      console.error("Error scheduling event reminders:", err)
+    );
+
+    // Schedule event live notification
+    scheduleEventLiveNotification(updatedEvent, studentId).catch((err) =>
+      console.error("Error scheduling event live notification:", err)
+    );
+
+    // Schedule post-event feedback notification
+    schedulePostEventFeedback(updatedEvent, studentId).catch((err) =>
+      console.error("Error scheduling post-event feedback notification:", err)
+    );
+
+    // Check for low seats and notify other students
+    if (remainingSeats < 10 && remainingSeats > 0) {
+      notifyLowSeats(updatedEvent).catch((err) =>
+        console.error("Error sending low seats notification:", err)
+      );
+    }
+
+    // Notify organizer if event is sold out
+    if (newParticipantCount >= eventData.participantLimit) {
+      notifyOrganizerSoldOut(updatedEvent, eventData.organizerId).catch((err) =>
+        console.error("Error sending organizer sold out notification:", err)
+      );
+    }
   } catch (error) {
     console.error("Error registering for event:", error);
     throw error;
@@ -310,6 +438,11 @@ export async function unregisterFromEvent(eventId: string, studentId: string): P
       participantCount: Math.max(0, (eventData.participantCount || 0) - 1),
       updatedAt: new Date().toISOString(),
     });
+
+    // Cancel all scheduled notifications for this event and student
+    cancelEventReminders(eventId, studentId).catch((err) =>
+      console.error("Error cancelling event reminders:", err)
+    );
   } catch (error) {
     console.error("Error unregistering from event:", error);
     throw error;
@@ -326,9 +459,10 @@ export async function getStudentEvents(studentId: string): Promise<Event[]> {
       const eventData = doc.data() as Event;
       const participants = eventData.participants || []; // Ensure participants is always an array
       if (participants.includes(studentId)) {
+        const { id: _, ...eventDataWithoutId } = eventData;
         events.push({
           id: doc.id,
-          ...eventData,
+          ...eventDataWithoutId,
           participants: participants, // Ensure participants is set
         } as Event);
       }
@@ -376,6 +510,16 @@ export async function markAttendance(eventId: string, studentId: string): Promis
       markedAt: new Date().toISOString(),
       organizerId: eventData.organizerId,
     });
+
+    // Send attendance confirmation notification
+    const { id: _, ...eventDataWithoutId } = eventData;
+    const event: Event = {
+      id: eventId,
+      ...eventDataWithoutId,
+    };
+    notifyAttendanceMarked(event, studentId).catch((err) =>
+      console.error("Error sending attendance notification:", err)
+    );
   } catch (error) {
     console.error("Error marking attendance:", error);
     throw error;
@@ -419,6 +563,119 @@ export async function isAttendanceMarked(eventId: string, studentId: string): Pr
   } catch (error) {
     console.error("Error checking attendance:", error);
     return false;
+  }
+}
+
+/**
+ * Check and notify organizer about low attendance for upcoming events
+ * Should be called when organizer views their events
+ */
+export async function checkAndNotifyLowAttendance(organizerId: string): Promise<void> {
+  try {
+    const events = await getOrganizerEvents(organizerId);
+    const now = new Date();
+
+    for (const event of events) {
+      // Only check events that haven't started yet
+      const startDate = new Date(event.startDate);
+      const [hours, minutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
+
+      // Check if event is within 48 hours and has low attendance (< 5 participants)
+      const timeUntilEvent = startDate.getTime() - now.getTime();
+      const hoursUntilEvent = timeUntilEvent / (1000 * 60 * 60);
+
+      if (hoursUntilEvent > 0 && hoursUntilEvent <= 48 && event.participantCount < 5) {
+        notifyOrganizerLowAttendance(event, organizerId).catch((err) =>
+          console.error("Error sending low attendance notification:", err)
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error checking low attendance:", error);
+  }
+}
+
+/**
+ * Check for upcoming events and send personalized suggestions to students
+ * Should be called when student opens the app or views events
+ */
+export async function checkAndSuggestEvents(studentId: string): Promise<void> {
+  try {
+    // Get all events
+    const allEvents = await getAllEvents();
+    const now = new Date();
+
+    // Get student's registered events to understand their preferences
+    const studentEvents = await getStudentEvents(studentId);
+    const registeredEventIds = new Set(studentEvents.map(e => e.id));
+    
+    // Count categories from registered events
+    const categoryCount: Record<string, number> = {};
+    studentEvents.forEach(event => {
+      categoryCount[event.category] = (categoryCount[event.category] || 0) + 1;
+    });
+
+    // Find the most preferred category
+    const preferredCategory = Object.keys(categoryCount).reduce((a, b) => 
+      categoryCount[a] > categoryCount[b] ? a : b, 
+      Object.keys(categoryCount)[0] || ""
+    );
+
+    // Find upcoming events in preferred category that student hasn't registered for
+    const suggestions = allEvents.filter(event => {
+      if (registeredEventIds.has(event.id)) return false; // Already registered
+      
+      const startDate = new Date(event.startDate);
+      const [hours, minutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
+      
+      // Only suggest events that haven't started and are within next 7 days
+      const timeUntilEvent = startDate.getTime() - now.getTime();
+      const daysUntilEvent = timeUntilEvent / (1000 * 60 * 60 * 24);
+      
+      return timeUntilEvent > 0 && daysUntilEvent <= 7 && 
+             (preferredCategory ? event.category === preferredCategory : true);
+    });
+
+    // Send suggestion for the first matching event (if any)
+    if (suggestions.length > 0) {
+      const suggestion = suggestions[0];
+      notifyEventSuggestion(suggestion, studentId).catch((err) =>
+        console.error("Error sending event suggestion notification:", err)
+      );
+    }
+  } catch (error) {
+    console.error("Error checking and suggesting events:", error);
+  }
+}
+
+/**
+ * Check for events starting soon (within 1 hour) and notify students
+ * Should be called when student opens the app
+ */
+export async function checkUpcomingEvents(studentId: string): Promise<void> {
+  try {
+    const studentEvents = await getStudentEvents(studentId);
+    const now = new Date();
+
+    for (const event of studentEvents) {
+      const startDate = new Date(event.startDate);
+      const [hours, minutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
+
+      const timeUntilEvent = startDate.getTime() - now.getTime();
+      const minutesUntilEvent = timeUntilEvent / (1000 * 60);
+
+      // Notify if event starts within 1 hour and hasn't started yet
+      if (timeUntilEvent > 0 && minutesUntilEvent <= 60 && minutesUntilEvent > 0) {
+        scheduleEventLiveNotification(event, studentId).catch((err) =>
+          console.error("Error scheduling event live notification:", err)
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error checking upcoming events:", error);
   }
 }
 

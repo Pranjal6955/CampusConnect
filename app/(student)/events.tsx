@@ -18,6 +18,8 @@ import {
 import AttendanceQRCode from "../../components/AttendanceQRCode";
 import { auth, db } from "../../config/firebase";
 import {
+  checkAndSuggestEvents,
+  checkUpcomingEvents,
   Event,
   getAllEvents,
   isAttendanceMarked,
@@ -288,6 +290,20 @@ export default function Events() {
         }
       }
       setAttendanceStatus(attendanceMap);
+
+      // Check for personalized event suggestions (only on initial load, not refresh)
+      if (!refreshing && studentId) {
+        checkAndSuggestEvents(studentId).catch((err) =>
+          console.error("Error checking event suggestions:", err)
+        );
+      }
+
+      // Check for upcoming events starting soon
+      if (studentId) {
+        checkUpcomingEvents(studentId).catch((err) =>
+          console.error("Error checking upcoming events:", err)
+        );
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load events");
       console.error(error);

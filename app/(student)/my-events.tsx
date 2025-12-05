@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { auth, db } from "../../config/firebase";
 import {
+  checkUpcomingEvents,
   Event,
   getStudentEvents,
 } from "../../utils/events";
@@ -194,6 +195,13 @@ export default function MyEvents() {
     try {
       const studentEvents = await getStudentEvents(studentId);
       setEvents(studentEvents);
+
+      // Check for upcoming events starting soon
+      if (studentId) {
+        checkUpcomingEvents(studentId).catch((err) =>
+          console.error("Error checking upcoming events:", err)
+        );
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load events");
       console.error(error);

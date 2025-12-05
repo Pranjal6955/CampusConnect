@@ -49,6 +49,14 @@
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access camera to scan QR codes for event attendance."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0EA5E9",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {
