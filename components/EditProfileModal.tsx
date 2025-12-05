@@ -22,8 +22,11 @@ interface EditProfileModalProps {
     initialData: {
         organizationName?: string;
         phoneNumber?: string;
+        firstName?: string;
+        lastName?: string;
     };
     loading: boolean;
+    isStudent?: boolean;
 }
 
 export default function EditProfileModal({
@@ -32,31 +35,55 @@ export default function EditProfileModal({
     onSubmit,
     initialData,
     loading,
+    isStudent = false,
 }: EditProfileModalProps) {
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === "dark";
 
     const [organizationName, setOrganizationName] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
 
     useEffect(() => {
         if (visible && initialData) {
-            setOrganizationName(initialData.organizationName || "");
-            setPhoneNumber(initialData.phoneNumber || "");
+            if (isStudent) {
+                setFirstName(initialData.firstName || "");
+                setLastName(initialData.lastName || "");
+                setPhoneNumber(initialData.phoneNumber || "");
+            } else {
+                setOrganizationName(initialData.organizationName || "");
+                setPhoneNumber(initialData.phoneNumber || "");
+            }
         }
-    }, [visible, initialData]);
+    }, [visible, initialData, isStudent]);
 
     const handleSubmit = async () => {
-        if (!organizationName || !phoneNumber) {
-            Alert.alert("Error", "Please fill in all fields");
-            return;
+        if (isStudent) {
+            if (!firstName || !lastName || !phoneNumber) {
+                Alert.alert("Error", "Please fill in all fields");
+                return;
+            }
+        } else {
+            if (!organizationName || !phoneNumber) {
+                Alert.alert("Error", "Please fill in all fields");
+                return;
+            }
         }
 
         try {
-            await onSubmit({
-                organizationName,
-                phoneNumber,
-            });
+            if (isStudent) {
+                await onSubmit({
+                    firstName,
+                    lastName,
+                    phoneNumber,
+                });
+            } else {
+                await onSubmit({
+                    organizationName,
+                    phoneNumber,
+                });
+            }
             onClose();
         } catch (error) {
             // Error handled in parent
@@ -100,60 +127,148 @@ export default function EditProfileModal({
                             </Text>
                         </View>
 
-                        {/* Organization Name */}
-                        <View className="mb-5">
-                            <View className="flex-row items-center mb-2">
-                                <Ionicons name="business-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
-                                <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                                    Organization Name
-                                </Text>
-                            </View>
-                            <TextInput
-                                value={organizationName}
-                                onChangeText={setOrganizationName}
-                                placeholder="Enter organization name"
-                                className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
-                                    }`}
-                                placeholderTextColor={isDark ? "#666" : "#999"}
-                                style={{
-                                    borderWidth: 1.5,
-                                    borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
-                                    shadowColor: "#000",
-                                    shadowOffset: { width: 0, height: 1 },
-                                    shadowOpacity: 0.05,
-                                    shadowRadius: 4,
-                                    elevation: 2,
-                                }}
-                            />
-                        </View>
+                        {isStudent ? (
+                            <>
+                                {/* First Name */}
+                                <View className="mb-5">
+                                    <View className="flex-row items-center mb-2">
+                                        <Ionicons name="person-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
+                                        <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                                            First Name
+                                        </Text>
+                                    </View>
+                                    <TextInput
+                                        value={firstName}
+                                        onChangeText={setFirstName}
+                                        placeholder="Enter first name"
+                                        className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+                                            }`}
+                                        placeholderTextColor={isDark ? "#666" : "#999"}
+                                        style={{
+                                            borderWidth: 1.5,
+                                            borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
+                                            shadowColor: "#000",
+                                            shadowOffset: { width: 0, height: 1 },
+                                            shadowOpacity: 0.05,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }}
+                                    />
+                                </View>
 
-                        {/* Phone Number */}
-                        <View className="mb-6">
-                            <View className="flex-row items-center mb-2">
-                                <Ionicons name="call-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
-                                <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                                    Phone Number
-                                </Text>
-                            </View>
-                            <TextInput
-                                value={phoneNumber}
-                                onChangeText={setPhoneNumber}
-                                placeholder="Enter phone number"
-                                keyboardType="phone-pad"
-                                className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
-                                    }`}
-                                placeholderTextColor={isDark ? "#666" : "#999"}
-                                style={{
-                                    borderWidth: 1.5,
-                                    borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
-                                    shadowColor: "#000",
-                                    shadowOffset: { width: 0, height: 1 },
-                                    shadowOpacity: 0.05,
-                                    shadowRadius: 4,
-                                    elevation: 2,
-                                }}
-                            />
-                        </View>
+                                {/* Last Name */}
+                                <View className="mb-5">
+                                    <View className="flex-row items-center mb-2">
+                                        <Ionicons name="person-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
+                                        <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                                            Last Name
+                                        </Text>
+                                    </View>
+                                    <TextInput
+                                        value={lastName}
+                                        onChangeText={setLastName}
+                                        placeholder="Enter last name"
+                                        className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+                                            }`}
+                                        placeholderTextColor={isDark ? "#666" : "#999"}
+                                        style={{
+                                            borderWidth: 1.5,
+                                            borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
+                                            shadowColor: "#000",
+                                            shadowOffset: { width: 0, height: 1 },
+                                            shadowOpacity: 0.05,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }}
+                                    />
+                                </View>
+
+                                {/* Phone Number */}
+                                <View className="mb-6">
+                                    <View className="flex-row items-center mb-2">
+                                        <Ionicons name="call-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
+                                        <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                                            Phone Number
+                                        </Text>
+                                    </View>
+                                    <TextInput
+                                        value={phoneNumber}
+                                        onChangeText={setPhoneNumber}
+                                        placeholder="Enter phone number"
+                                        keyboardType="phone-pad"
+                                        className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+                                            }`}
+                                        placeholderTextColor={isDark ? "#666" : "#999"}
+                                        style={{
+                                            borderWidth: 1.5,
+                                            borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
+                                            shadowColor: "#000",
+                                            shadowOffset: { width: 0, height: 1 },
+                                            shadowOpacity: 0.05,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }}
+                                    />
+                                </View>
+                            </>
+                        ) : (
+                            <>
+                                {/* Organization Name */}
+                                <View className="mb-5">
+                                    <View className="flex-row items-center mb-2">
+                                        <Ionicons name="business-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
+                                        <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                                            Organization Name
+                                        </Text>
+                                    </View>
+                                    <TextInput
+                                        value={organizationName}
+                                        onChangeText={setOrganizationName}
+                                        placeholder="Enter organization name"
+                                        className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+                                            }`}
+                                        placeholderTextColor={isDark ? "#666" : "#999"}
+                                        style={{
+                                            borderWidth: 1.5,
+                                            borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
+                                            shadowColor: "#000",
+                                            shadowOffset: { width: 0, height: 1 },
+                                            shadowOpacity: 0.05,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }}
+                                    />
+                                </View>
+
+                                {/* Phone Number */}
+                                <View className="mb-6">
+                                    <View className="flex-row items-center mb-2">
+                                        <Ionicons name="call-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
+                                        <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                                            Phone Number
+                                        </Text>
+                                    </View>
+                                    <TextInput
+                                        value={phoneNumber}
+                                        onChangeText={setPhoneNumber}
+                                        placeholder="Enter phone number"
+                                        keyboardType="phone-pad"
+                                        className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+                                            }`}
+                                        placeholderTextColor={isDark ? "#666" : "#999"}
+                                        style={{
+                                            borderWidth: 1.5,
+                                            borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.15)",
+                                            shadowColor: "#000",
+                                            shadowOffset: { width: 0, height: 1 },
+                                            shadowOpacity: 0.05,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }}
+                                    />
+                                </View>
+                            </>
+                        )}
 
                         {/* Submit Button */}
                         <TouchableOpacity

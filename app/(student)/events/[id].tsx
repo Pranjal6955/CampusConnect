@@ -11,7 +11,9 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import AttendanceQRCode from "../../../components/AttendanceQRCode";
 import Badge from "../../../components/Badge";
+import SuccessAnimation from "../../../components/SuccessAnimation";
 import { auth } from "../../../config/firebase";
 import { Event, getEvent, registerForEvent, unregisterFromEvent } from "../../../utils/events";
 
@@ -22,6 +24,8 @@ export default function EventDetails() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   const studentId = auth.currentUser?.uid || "";
 
@@ -89,8 +93,36 @@ export default function EventDetails() {
     return new Date() > endDate;
   };
 
+  const isEventOngoing = () => {
+    if (!event) return false;
+    const now = new Date();
+    const startDate = new Date(event.startDate);
+    const endDate = new Date(event.endDate);
+    
+    if (event.startTime && !event.fullDayEvent) {
+      const [startHours, startMinutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(startHours, startMinutes, 0, 0);
+    } else {
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    if (event.endTime && !event.fullDayEvent) {
+      const [endHours, endMinutes] = event.endTime.split(":").map(Number);
+      endDate.setHours(endHours, endMinutes, 0, 0);
+    } else {
+      endDate.setHours(23, 59, 59, 999);
+    }
+    
+    return now >= startDate && now <= endDate;
+  };
+
   const handleRegister = async () => {
     if (!event || !studentId) return;
+    
+    if (isEventOngoing()) {
+      Alert.alert("Event Ongoing", "You cannot join an event that has already started. Registration is only available before the event begins.");
+      return;
+    }
     
     if (isFull()) {
       Alert.alert("Event Full", "This event has reached its participant limit.");
@@ -100,7 +132,7 @@ export default function EventDetails() {
     setRegistering(true);
     try {
       await registerForEvent(event.id, studentId);
-      Alert.alert("Success", "Successfully registered for the event");
+      setShowSuccessAnimation(true);
       loadEvent();
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to register for event");
@@ -169,6 +201,7 @@ export default function EventDetails() {
   const registered = isRegistered();
   const full = isFull();
   const ended = isEventEnded();
+  const ongoing = isEventOngoing();
 
   return (
     <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"}`}>
@@ -369,81 +402,119 @@ export default function EventDetails() {
               </View>
             </View>
           </View>
-        </View>
-        <View className="h-24" />
-      </ScrollView>
 
-      {/* Floating Action Bar */}
-      <View className={`absolute bottom-0 left-0 right-0 p-5 pt-4 ${isDark ? "bg-black" : "bg-white"}`}
-        style={{
-          borderTopWidth: 1,
-          borderTopColor: isDark ? "#374151" : "#e5e7eb",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
-          elevation: 5,
-        }}
-      >
-        {ended ? (
-          <View className="py-4 rounded-xl items-center flex-row justify-center"
-            style={{
-              backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
-              borderWidth: 1.5,
-              borderColor: "#ef4444",
-            }}
-          >
+          {/* Action Buttons */}
+          <View className="mb-6">
+            {ended ? (
+              <View className="py-4 rounded-xl items-center flex-row justify-center"
+                style={{
+                  backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
+                  borderWidth: 1.5,
+                  borderColor: "#ef4444",
+                }}
+              >
             <Ionicons name="close-circle" size={22} color="#ef4444" style={{ marginRight: 10 }} />
             <Text className="text-red-500 font-bold text-base">Event Ended</Text>
           </View>
-        ) : registered ? (
-          <TouchableOpacity
-            onPress={handleUnregister}
-            disabled={registering}
-            activeOpacity={0.8}
-            className={`py-4 rounded-xl items-center flex-row justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
+        ) : ongoing ? (
+          <View className="py-4 rounded-xl items-center flex-row justify-center"
             style={{
+              backgroundColor: isDark ? "rgba(234, 179, 8, 0.2)" : "rgba(234, 179, 8, 0.1)",
               borderWidth: 1.5,
-              borderColor: "#ef4444",
+              borderColor: "#eab308",
             }}
           >
-            {registering ? (
-              <ActivityIndicator size="small" color="#ef4444" />
+            <Ionicons name="time" size={22} color="#eab308" style={{ marginRight: 10 }} />
+            <Text className="text-yellow-500 font-bold text-base">Event Ongoing - Registration Closed</Text>
+          </View>
+        ) : registered ? (
+              <View className="flex-row" style={{ gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => setShowQRCode(true)}
+                  activeOpacity={0.8}
+                  className="flex-1 py-4 rounded-xl items-center flex-row justify-center"
+                  style={{
+                    backgroundColor: "#0EA5E9",
+                    shadowColor: "#0EA5E9",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                >
+                  <Ionicons name="qr-code-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+                  <Text className="text-white font-bold text-base">Show QR Code</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleUnregister}
+                  disabled={registering}
+                  activeOpacity={0.8}
+                  className={`flex-1 py-4 rounded-xl items-center flex-row justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
+                  style={{
+                    borderWidth: 1.5,
+                    borderColor: "#ef4444",
+                  }}
+                >
+                  {registering ? (
+                    <ActivityIndicator size="small" color="#ef4444" />
+                  ) : (
+                    <>
+                      <Ionicons name="close-circle-outline" size={22} color="#ef4444" style={{ marginRight: 10 }} />
+                      <Text className="text-red-500 font-bold text-base">Unregister</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             ) : (
-              <>
-                <Ionicons name="close-circle-outline" size={22} color="#ef4444" style={{ marginRight: 10 }} />
-                <Text className="text-red-500 font-bold text-base">Unregister</Text>
-              </>
+              <TouchableOpacity
+                onPress={handleRegister}
+                disabled={registering || full || ongoing}
+                activeOpacity={0.8}
+                className="py-4 rounded-xl items-center flex-row justify-center"
+                style={{
+                  backgroundColor: full || ongoing ? "#6b7280" : "#0EA5E9",
+                  shadowColor: full || ongoing ? "#6b7280" : "#0EA5E9",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                {registering ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+                    <Text className="text-white font-bold text-base">
+                      {ongoing ? "Event Ongoing" : full ? "Event Full" : "RSVP"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={handleRegister}
-            disabled={registering || full}
-            activeOpacity={0.8}
-            className="py-4 rounded-xl items-center flex-row justify-center"
-            style={{
-              backgroundColor: full ? "#6b7280" : "#0EA5E9",
-              shadowColor: full ? "#6b7280" : "#0EA5E9",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
-              elevation: 3,
-            }}
-          >
-            {registering ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
-                <Text className="text-white font-bold text-base">
-                  {full ? "Event Full" : "Register for Event"}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+          </View>
+        </View>
+        <View className="h-6" />
+      </ScrollView>
+
+      {/* Success Animation */}
+      <SuccessAnimation
+        visible={showSuccessAnimation}
+        onClose={() => setShowSuccessAnimation(false)}
+        message="You've successfully joined this event!"
+        title="You're In! 🎉"
+      />
+
+      {/* QR Code Modal */}
+      {event && (
+        <AttendanceQRCode
+          visible={showQRCode}
+          onClose={() => setShowQRCode(false)}
+          eventId={event.id}
+          studentId={studentId}
+          eventTitle={event.title}
+        />
+      )}
     </View>
   );
 }

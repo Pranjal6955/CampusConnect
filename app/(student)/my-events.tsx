@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   RefreshControl,
   ScrollView,
   Text,
@@ -15,13 +14,10 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import AttendanceQRCode from "../../components/AttendanceQRCode";
-import Badge from "../../components/Badge";
 import { auth, db } from "../../config/firebase";
 import {
   Event,
   getStudentEvents,
-  unregisterFromEvent,
 } from "../../utils/events";
 
 export default function MyEvents() {
@@ -31,16 +27,11 @@ export default function MyEvents() {
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [unregisteringEventId, setUnregisteringEventId] = useState<string | null>(null);
-  const [showQRCode, setShowQRCode] = useState(false);
-  const [qrEvent, setQrEvent] = useState<Event | null>(null);
 
   const studentId = auth.currentUser?.uid || "";
 
@@ -217,43 +208,8 @@ export default function MyEvents() {
     loadEvents();
   }, []);
 
-  const openViewModal = (event: Event) => {
-    setViewingEvent(event);
-    setShowViewModal(true);
-  };
-
-  const closeViewModal = () => {
-    setShowViewModal(false);
-    setViewingEvent(null);
-  };
-
-  const handleUnregister = async (event: Event) => {
-    if (unregisteringEventId) return;
-    
-    Alert.alert(
-      "Unregister",
-      `Are you sure you want to unregister from "${event.title}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Unregister",
-          style: "destructive",
-          onPress: async () => {
-            setUnregisteringEventId(event.id);
-            try {
-              await unregisterFromEvent(event.id, studentId);
-              Alert.alert("Success", "Unregistered from event successfully");
-              loadEvents();
-              closeViewModal();
-            } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to unregister from event");
-            } finally {
-              setUnregisteringEventId(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleEventPress = (event: Event) => {
+    router.push(`/(student)/events/${event.id}`);
   };
 
   if (loading) {
@@ -282,69 +238,84 @@ export default function MyEvents() {
             </Text>
           </View>
 
-          {/* Search Bar */}
-          <View className="mb-6">
-            <View
-              className={`flex-row items-center px-4 py-2 rounded-2xl ${isDark ? "bg-gray-900" : "bg-white"
-                }`}
-              style={{
-                shadowColor: "#0EA5E9",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-                borderWidth: 1,
-                borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
-              }}
-            >
-              <Ionicons name="search" size={18} color="#0EA5E9" />
-              <TextInput
-                placeholder="Search events..."
-                placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className={`flex-1 ml-2 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
-                style={{ height: 36 }}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
-                </TouchableOpacity>
-              )}
+          {/* Search Bar and Category Filter - Side by Side */}
+          <View className="flex-row mb-4" style={{ gap: 12 }}>
+            {/* Search Bar */}
+            <View style={{ flex: 3 }}>
+              <View
+                className={`flex-row items-center px-4 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"
+                  }`}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  height: 44,
+                }}
+              >
+                <View className={`w-7 h-7 rounded-lg items-center justify-center mr-2 ${isDark ? "bg-gray-700" : "bg-white"}`}>
+                  <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
+                </View>
+                <TextInput
+                  placeholder="Search events..."
+                  placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className={`flex-1 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
+                  style={{ height: 36 }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity 
+                    onPress={() => setSearchQuery("")}
+                    className={`w-6 h-6 rounded-full items-center justify-center ${isDark ? "bg-gray-700" : "bg-gray-200"}`}
+                  >
+                    <Ionicons name="close" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
 
-          {/* Category Dropdown */}
-          <View className="mb-4">
-            <View className="flex-1">
+            {/* Category Dropdown */}
+            <View style={{ flex: 1, maxWidth: 150 }}>
               <TouchableOpacity
                 onPress={() => {
                   setShowCategoryDropdown(!showCategoryDropdown);
                 }}
-                className={`flex-row items-center justify-between px-3 py-2 rounded-lg ${isDark ? "bg-gray-900" : "bg-white"}`}
+                className={`flex-row items-center justify-between px-2.5 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"}`}
                 style={{
-                  borderWidth: 1,
-                  borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                  borderWidth: 1.5,
+                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  height: 44,
                 }}
               >
-                <Text className={`text-sm font-medium flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
-                  {selectedCategory}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                <View className="flex-row items-center flex-1">
+                  <View className={`w-6 h-6 rounded-lg items-center justify-center mr-1.5 ${isDark ? "bg-gray-700" : "bg-white"}`}>
+                    <Ionicons name="grid" size={12} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  </View>
+                  <Text className={`text-xs font-semibold flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
+                    {selectedCategory}
+                  </Text>
+                </View>
+                <Ionicons 
+                  name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
+                  size={14} 
+                  color={isDark ? "#9ca3af" : "#6b7280"} 
+                />
               </TouchableOpacity>
 
               {/* Category Dropdown Menu */}
               {showCategoryDropdown && (
                 <View
-                  className={`absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
+                  className={`absolute top-full right-0 mt-2 rounded-xl overflow-hidden ${isDark ? "bg-gray-800" : "bg-white"}`}
                   style={{
                     shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 8,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 12,
+                    elevation: 10,
                     zIndex: 1000,
                     maxHeight: 300,
+                    minWidth: 200,
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
                   }}
                 >
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
@@ -356,24 +327,29 @@ export default function MyEvents() {
                           setShowCategoryDropdown(false);
                         }}
                         activeOpacity={0.7}
-                        className={`px-4 py-3 flex-row items-center ${
+                        className={`px-4 py-3.5 flex-row items-center ${
                           selectedCategory === category
                             ? isDark
                               ? "bg-blue-900/30"
                               : "bg-blue-50"
                             : isDark
-                            ? "bg-gray-900"
+                            ? "bg-gray-800"
                             : "bg-white"
                         }`}
+                        style={{
+                          borderBottomWidth: index < categories.length - 1 ? 1 : 0,
+                          borderBottomColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(229, 231, 235, 1)",
+                        }}
                       >
                         {selectedCategory === category && (
-                          <Ionicons name="checkmark" size={18} color="#0EA5E9" style={{ marginRight: 8, flexShrink: 0 }} />
+                          <View className={`w-6 h-6 rounded-full items-center justify-center mr-3 ${isDark ? "bg-blue-600" : "bg-blue-500"}`}>
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          </View>
                         )}
-                        {selectedCategory !== category && <View style={{ width: 26, flexShrink: 0 }} />}
+                        {selectedCategory !== category && <View style={{ width: 38, flexShrink: 0 }} />}
                         <Text 
-                          className={`text-sm flex-1 ${isDark ? "text-gray-100" : "text-gray-900"}`}
-                          numberOfLines={2}
-                          style={{ flexWrap: 'wrap' }}
+                          className={`text-base flex-1 font-medium ${isDark ? "text-white" : "text-gray-900"}`}
+                          numberOfLines={1}
                         >
                           {category}
                         </Text>
@@ -499,7 +475,7 @@ export default function MyEvents() {
               return (
                 <TouchableOpacity
                   key={event.id}
-                  onPress={() => openViewModal(event)}
+                  onPress={() => handleEventPress(event)}
                   activeOpacity={0.9}
                   className={`mb-4 rounded-2xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
                 >
@@ -611,299 +587,8 @@ export default function MyEvents() {
           )}
         </View>
       </ScrollView>
-
-      {/* View Event Modal */}
-      {viewingEvent && (
-        <StudentViewEventModal
-          visible={showViewModal}
-          event={viewingEvent}
-          onClose={closeViewModal}
-          onUnregister={handleUnregister}
-          onShowQRCode={(event) => {
-            setQrEvent(event);
-            setShowQRCode(true);
-          }}
-          isLoading={unregisteringEventId === viewingEvent.id}
-        />
-      )}
-
-      {/* QR Code Modal */}
-      {qrEvent && (
-        <AttendanceQRCode
-          visible={showQRCode}
-          onClose={() => {
-            setShowQRCode(false);
-            setQrEvent(null);
-          }}
-          eventId={qrEvent.id}
-          studentId={studentId}
-          eventTitle={qrEvent.title}
-        />
-      )}
     </View>
   );
 }
 
-// Student View Event Modal for My Events
-interface StudentViewEventModalProps {
-  visible: boolean;
-  event: Event;
-  onClose: () => void;
-  onUnregister: (event: Event) => void;
-  onShowQRCode: (event: Event) => void;
-  isLoading: boolean;
-}
-
-function StudentViewEventModal({
-  visible,
-  event,
-  onClose,
-  onUnregister,
-  onShowQRCode,
-  isLoading,
-}: StudentViewEventModalProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
-
-  const formatTimeTo12Hour = (time24: string | undefined): string => {
-    if (!time24) return "";
-    const [hours, minutes] = time24.split(":").map(Number);
-    const period = hours >= 12 ? "PM" : "AM";
-    const hours12 = hours % 12 || 12;
-    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Club Event": return "people";
-      case "Seminar": return "mic";
-      case "Sports": return "basketball";
-      case "Cultural": return "musical-notes";
-      case "Workshop": return "construct";
-      case "Fest": return "party-popper";
-      case "Hackathon": return "code-slash";
-      default: return "calendar";
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"}`}>
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          {/* Header Image Section */}
-          <View className="relative h-72">
-            {event.imageUrl ? (
-              <Image
-                source={{ uri: event.imageUrl }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                className={`w-full h-full items-center justify-center ${isDark ? "bg-gray-900" : "bg-gray-200"}`}
-              >
-                <Ionicons name="image-outline" size={64} color={isDark ? "#4b5563" : "#9ca3af"} />
-              </View>
-            )}
-
-            {/* Gradient Overlay */}
-            <View
-              className="absolute inset-0"
-              style={{
-                backgroundColor: "rgba(0,0,0,0.3)"
-              }}
-            />
-
-            {/* Close Button */}
-            <TouchableOpacity
-              onPress={onClose}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full items-center justify-center bg-black/30 backdrop-blur-md"
-            >
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Title & Category Overlay */}
-            <View className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-              <View className="flex-row items-center mb-3">
-                <View className="mr-2">
-                  <Badge
-                    label={event.category}
-                    style="solid"
-                    color="blue"
-                    icon="none"
-                    className="shadow-lg"
-                  />
-                </View>
-                <Badge
-                  label="Registered"
-                  style="solid"
-                  color="green"
-                  icon="checkmark"
-                  className="shadow-lg"
-                />
-              </View>
-              <Text className="text-3xl font-extrabold text-white shadow-sm leading-tight">
-                {event.title}
-              </Text>
-            </View>
-          </View>
-
-          {/* Content Body */}
-          <View className="px-6 py-6">
-            {/* Stats Row */}
-            <View className="flex-row justify-between mb-8">
-              <View className={`flex-1 p-4 rounded-2xl mr-2 items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.03,
-                  shadowRadius: 4,
-                  elevation: 1,
-                }}
-              >
-                <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
-                <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"} uppercase`}>Going</Text>
-              </View>
-              <View className={`flex-1 p-4 rounded-2xl ml-2 items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.03,
-                  shadowRadius: 4,
-                  elevation: 1,
-                }}
-              >
-                <Text className={`text-2xl font-bold ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
-                <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"} uppercase`}>Limit</Text>
-              </View>
-            </View>
-
-            {/* Description */}
-            <View className="mb-8">
-              <Text className={`text-lg font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>About Event</Text>
-              <Text className={`text-base leading-7 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
-                {event.description}
-              </Text>
-            </View>
-
-            {/* Details List */}
-            <View className="mb-8 space-y-4">
-              {/* Date */}
-              <View className="flex-row items-start">
-                <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
-                  <Ionicons name="calendar-number" size={20} color="#3b82f6" />
-                </View>
-                <View className="flex-1">
-                  <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Date</Text>
-                  <Text className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-                    {formatDate(event.startDate)}
-                    {event.startDate !== event.endDate && ` - ${formatDate(event.endDate)}`}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Time */}
-              {!event.fullDayEvent && (
-                <View className="flex-row items-start mt-4">
-                  <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-purple-50"}`}>
-                    <Ionicons name="alarm-outline" size={20} color="#a855f7" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Time</Text>
-                    <Text className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {event.startTime && event.endTime 
-                        ? `${formatTimeTo12Hour(event.startTime)} - ${formatTimeTo12Hour(event.endTime)}`
-                        : event.startTime 
-                        ? formatTimeTo12Hour(event.startTime)
-                        : ""}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Venue */}
-              <View className="flex-row items-start mt-4">
-                <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-green-50"}`}>
-                  <Ionicons name="map-outline" size={20} color="#10b981" />
-                </View>
-                <View className="flex-1">
-                  <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Venue</Text>
-                  <Text className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-                    {event.venue}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          <View className="h-24" />
-        </ScrollView>
-
-        {/* Floating Action Bar */}
-        <View className={`absolute bottom-0 left-0 right-0 p-6 pt-4 border-t ${isDark ? "bg-black border-gray-800" : "bg-white border-gray-100"}`}
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: -1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
-            elevation: 5,
-          }}
-        >
-          <View className="flex-row space-x-4" style={{ gap: 12 }}>
-            <TouchableOpacity
-              onPress={() => {
-                onClose();
-                onShowQRCode(event);
-              }}
-              className="flex-1 py-4 rounded-2xl items-center flex-row justify-center"
-              style={{
-                backgroundColor: "#0EA5E9",
-                shadowColor: "#0EA5E9",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-            >
-              <Ionicons name="scan-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
-              <Text className="text-white font-bold text-base">Show QR Code</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onUnregister(event)}
-              disabled={isLoading}
-              className={`flex-1 py-4 rounded-2xl items-center flex-row justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
-              style={{
-                borderWidth: 1,
-                borderColor: isDark ? "rgba(239, 68, 68, 0.3)" : "rgba(239, 68, 68, 0.2)",
-              }}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#ef4444" />
-              ) : (
-                <>
-                  <Ionicons name="close-circle-outline" size={22} color="#ef4444" style={{ marginRight: 8 }} />
-                  <Text className="text-red-500 font-bold text-base">Unregister</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
