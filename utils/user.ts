@@ -6,6 +6,7 @@ export interface UpdateUserData {
     phoneNumber?: string;
     firstName?: string;
     lastName?: string;
+    name?: string;
 }
 
 export async function updateUserProfile(userId: string, data: UpdateUserData): Promise<void> {

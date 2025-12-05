@@ -39,7 +39,14 @@ export default function Profile() {
 
         setUpdateLoading(true);
         try {
-            await updateUserProfile(auth.currentUser.uid, data);
+            // Update name field for students
+            const updateData: UpdateUserData = {
+                ...data,
+            };
+            if (data.firstName && data.lastName) {
+                updateData.name = `${data.firstName} ${data.lastName}`;
+            }
+            await updateUserProfile(auth.currentUser.uid, updateData);
             Alert.alert("Success", "Profile updated successfully");
             loadUserData(); // Refresh data
         } catch (error) {
@@ -373,10 +380,12 @@ export default function Profile() {
                 onClose={() => setShowEditModal(false)}
                 onSubmit={handleUpdateProfile}
                 initialData={{
-                    organizationName: userData?.name || `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim() || "Student",
-                    phoneNumber: userData?.phoneNumber,
+                    firstName: userData?.firstName || "",
+                    lastName: userData?.lastName || "",
+                    phoneNumber: userData?.phoneNumber || "",
                 }}
                 loading={updateLoading}
+                isStudent={true}
             />
 
             <ChangePasswordModal

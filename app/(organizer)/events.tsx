@@ -27,6 +27,7 @@ import {
   getOrganizerEvents,
   markAttendance,
   updateEvent,
+  checkAndNotifyLowAttendance,
 } from "../../utils/events";
 
 export default function Events() {
@@ -239,6 +240,11 @@ export default function Events() {
     try {
       const organizerEvents = await getOrganizerEvents(organizerId);
       setEvents(organizerEvents);
+      
+      // Check for low attendance and notify organizer
+      checkAndNotifyLowAttendance(organizerId).catch((err) =>
+        console.error("Error checking low attendance:", err)
+      );
     } catch (error) {
       Alert.alert("Error", "Failed to load events");
       console.error(error);

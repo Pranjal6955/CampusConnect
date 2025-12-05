@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { router, useFocusEffect } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
@@ -14,10 +15,14 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import AttendanceQRCode from "../../components/AttendanceQRCode";
 import { auth, db } from "../../config/firebase";
 import {
+  checkAndSuggestEvents,
+  checkUpcomingEvents,
   Event,
   getAllEvents,
+  isAttendanceMarked,
 } from "../../utils/events";
 
 export default function Events() {
@@ -32,6 +37,9 @@ export default function Events() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrEvent, setQrEvent] = useState<Event | null>(null);
+  const [attendanceStatus, setAttendanceStatus] = useState<Record<string, boolean>>({});
 
   const studentId = auth.currentUser?.uid || "";
 
@@ -134,6 +142,79 @@ export default function Events() {
     return isEventEnded(event);
   };
 
+  // Check if event is today
+  const isEventToday = (event: Event): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDate = new Date(event.startDate);
+    eventDate.setHours(0, 0, 0, 0);
+    return eventDate.getTime() === today.getTime();
+  };
+
+  // Check if event is tomorrow
+  const isEventTomorrow = (event: Event): boolean => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const eventDate = new Date(event.startDate);
+    eventDate.setHours(0, 0, 0, 0);
+    return eventDate.getTime() === tomorrow.getTime();
+  };
+
+  // Check if event is ongoing (started but not ended)
+  const isEventOngoing = (event: Event): boolean => {
+    const now = new Date();
+    const startDate = new Date(event.startDate);
+    const endDate = new Date(event.endDate);
+    
+    if (event.startTime && !event.fullDayEvent) {
+      const [startHours, startMinutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(startHours, startMinutes, 0, 0);
+    } else {
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    if (event.endTime && !event.fullDayEvent) {
+      const [endHours, endMinutes] = event.endTime.split(":").map(Number);
+      endDate.setHours(endHours, endMinutes, 0, 0);
+    } else {
+      endDate.setHours(23, 59, 59, 999);
+    }
+    
+    return now >= startDate && now <= endDate;
+  };
+
+  // Get days until event (accurate calculation)
+  const getDaysUntilEvent = (event: Event): number => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const eventDate = new Date(event.startDate);
+    eventDate.setHours(0, 0, 0, 0);
+    const diffTime = eventDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // Get status text for event
+  const getEventStatusText = (event: Event): string => {
+    if (isEventOngoing(event)) {
+      return "Ongoing";
+    } else if (isEventToday(event)) {
+      return "Today";
+    } else if (isEventTomorrow(event)) {
+      return "Tomorrow";
+    } else {
+      const days = getDaysUntilEvent(event);
+      if (days < 0) {
+        return "Past";
+      } else if (days === 0) {
+        return "Today";
+      } else {
+        return `In ${days} days`;
+      }
+    }
+  };
+
   useEffect(() => {
     loadUserData();
     loadEvents();
@@ -194,6 +275,35 @@ export default function Events() {
     try {
       const allEvents = await getAllEvents();
       setEvents(allEvents);
+      
+      // Load attendance status for registered events
+      const attendanceMap: Record<string, boolean> = {};
+      for (const event of allEvents) {
+        if (isRegistered(event)) {
+          try {
+            const marked = await isAttendanceMarked(event.id, studentId);
+            attendanceMap[event.id] = marked;
+          } catch (error) {
+            console.error(`Error checking attendance for event ${event.id}:`, error);
+            attendanceMap[event.id] = false;
+          }
+        }
+      }
+      setAttendanceStatus(attendanceMap);
+
+      // Check for personalized event suggestions (only on initial load, not refresh)
+      if (!refreshing && studentId) {
+        checkAndSuggestEvents(studentId).catch((err) =>
+          console.error("Error checking event suggestions:", err)
+        );
+      }
+
+      // Check for upcoming events starting soon
+      if (studentId) {
+        checkUpcomingEvents(studentId).catch((err) =>
+          console.error("Error checking upcoming events:", err)
+        );
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load events");
       console.error(error);
@@ -235,97 +345,366 @@ export default function Events() {
         }
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* Header Section */}
-        <View className="px-5 pt-16 pb-6">
-          <View className="mb-6 flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                Welcome back,
-              </Text>
-              <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                {userData?.name || userData?.firstName || "Student"}
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-3">
-              <TouchableOpacity
-                className={`w-10 h-10 rounded-full items-center justify-center ${isDark ? "bg-gray-900" : "bg-gray-100"}`}
-              >
-                <Ionicons name="notifications-outline" size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                className={`w-10 h-10 rounded-full items-center justify-center ${isDark ? "bg-gray-900" : "bg-gray-100"}`}
-                onPress={() => router.push("/(student)/profile" as any)}
-              >
-                <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                  {(userData?.name || userData?.firstName || "S")[0].toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* Top Header */}
+        <View className="px-5 pt-16 pb-4 flex-row items-center justify-between">
+          {/* Welcome Message */}
+          <View className="flex-1">
+            <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+              Welcome {userData?.firstName || "User"} 👋
+            </Text>
           </View>
-
-          {/* Search Bar */}
-          <View className="mb-6">
-            <View
-              className={`flex-row items-center px-4 py-2 rounded-2xl ${isDark ? "bg-gray-900" : "bg-white"
-                }`}
-              style={{
-                shadowColor: "#0EA5E9",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-                borderWidth: 1,
-                borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
-              }}
+          
+          {/* Icons */}
+          <View className="flex-row items-center" style={{ gap: 12 }}>
+            <TouchableOpacity
+              className={`w-10 h-10 rounded-full items-center justify-center ${isDark ? "bg-gray-900" : "bg-gray-100"}`}
             >
-              <Ionicons name="search" size={18} color="#0EA5E9" />
-              <TextInput
-                placeholder="Search events..."
-                placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className={`flex-1 ml-2 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
-                style={{ height: 36 }}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
-                </TouchableOpacity>
-              )}
-            </View>
+              <Ionicons name="notifications-outline" size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={`w-10 h-10 rounded-full items-center justify-center ${isDark ? "bg-gray-900" : "bg-gray-100"}`}
+              onPress={() => router.push("/(student)/profile" as any)}
+            >
+              <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                {(userData?.name || userData?.firstName || "S")[0].toUpperCase()}
+              </Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Category Dropdown */}
-          <View className="mb-4">
-            <View className="flex-1">
+        {/* Event Spotlight - Premium Featured Section */}
+        {(() => {
+          // Filter: Include ongoing, today, tomorrow, and upcoming events (exclude ended)
+          const now = new Date();
+          const filteredEvents = events.filter(event => {
+            // Exclude ended events
+            if (isEventEnded(event)) return false;
+            
+            // Include ongoing events, today, tomorrow, or upcoming events
+            if (isEventOngoing(event)) return true;
+            
+            const eventDate = new Date(event.startDate);
+            eventDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Include if event date is today or in the future
+            return eventDate.getTime() >= today.getTime();
+          });
+          
+          // Sort: Ongoing events first, then tomorrow's, then today's, then others
+          const sortedEvents = filteredEvents.sort((a, b) => {
+            if (isEventOngoing(a) && !isEventOngoing(b)) return -1;
+            if (!isEventOngoing(a) && isEventOngoing(b)) return 1;
+            if (isEventTomorrow(a) && !isEventTomorrow(b)) return -1;
+            if (!isEventTomorrow(a) && isEventTomorrow(b)) return 1;
+            if (isEventToday(a) && !isEventToday(b)) return -1;
+            if (!isEventToday(a) && isEventToday(b)) return 1;
+            return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+          });
+          
+          const spotlightEvents = sortedEvents.slice(0, 3);
+          if (spotlightEvents.length === 0) return null;
+          
+          return (
+            <View className="mb-6">
+              {/* Spotlight Header */}
+              <View className="px-5 mb-4">
+                <View className="flex-row items-center justify-between mb-2">
+                  <View className="flex-row items-center">
+                    <View className="mr-3">
+                      <Ionicons name="star" size={24} color="#fbbf24" />
+                    </View>
+                    <View>
+                      <Text className={`text-xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}>
+                        Event Spotlight
+                      </Text>
+                      <Text className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                        Handpicked events just for you
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+              
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20, paddingRight: 20 }}
+                className="mb-4"
+              >
+                {spotlightEvents.map((event, index) => {
+                  const dateTimeString = `${formatDateFull(event.startDate)}${!event.fullDayEvent && event.startTime ? `, ${formatTimeTo12Hour(event.startTime)}` : ""}`;
+                  const registered = isRegistered(event);
+                  const statusText = getEventStatusText(event);
+                  
+                  return (
+                    <TouchableOpacity
+                      key={event.id}
+                      onPress={() => openEventDetails(event)}
+                      activeOpacity={0.9}
+                      className="mr-4"
+                      style={{ width: 240 }}
+                    >
+                      <View
+                        className={`rounded-2xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
+                        style={{
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 6,
+                          elevation: 3,
+                        }}
+                      >
+                        {/* Premium Badge */}
+                        <View className="absolute top-2 left-2 z-10">
+                          <View
+                            className="px-2 py-1 rounded-full flex-row items-center"
+                            style={{
+                              backgroundColor: "#fbbf24",
+                            }}
+                          >
+                            <Ionicons name="flash" size={10} color="#fff" />
+                            <Text className="text-xs font-bold text-white ml-0.5">FEATURED</Text>
+                          </View>
+                        </View>
+                        
+                        {/* Event Image */}
+                        <View className="h-32 relative">
+                          {event.imageUrl ? (
+                            <Image
+                              source={{ uri: event.imageUrl }}
+                              className="w-full h-full"
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <View className={`w-full h-full items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
+                              <Ionicons name="calendar-outline" size={48} color={isDark ? "#4b5563" : "#9ca3af"} />
+                            </View>
+                          )}
+                          
+                          {/* Dark Blur Overlay */}
+                          <BlurView
+                            intensity={40}
+                            tint="dark"
+                            className="absolute inset-0"
+                          />
+                          <View
+                            className="absolute inset-0"
+                            style={{
+                              backgroundColor: "rgba(0, 0, 0, 0.2)",
+                            }}
+                          />
+                          
+                          {/* Status Badge */}
+                          <View className="absolute top-2 right-2">
+                            <View
+                              className="px-2 py-1 rounded-full"
+                              style={{
+                                backgroundColor: isEventOngoing(event)
+                                  ? "rgba(34, 197, 94, 0.9)"
+                                  : isEventToday(event) 
+                                  ? "rgba(239, 68, 68, 0.9)" 
+                                  : isEventTomorrow(event)
+                                  ? "rgba(14, 165, 233, 0.9)"
+                                  : "rgba(14, 165, 233, 0.9)",
+                              }}
+                            >
+                              <Text className="text-xs font-bold text-white">
+                                {statusText}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                        
+                        {/* Event Details */}
+                        <View className="p-3">
+                          {/* Event Title */}
+                          <Text
+                            numberOfLines={2}
+                            className={`text-base font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}
+                          >
+                            {event.title}
+                          </Text>
+                          
+                          {/* Date */}
+                          <View className="flex-row items-center mb-2">
+                            <Ionicons name="calendar-outline" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                            <Text
+                              numberOfLines={1}
+                              className={`text-xs ml-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                              ellipsizeMode="tail"
+                            >
+                              {formatDateFull(event.startDate)}
+                            </Text>
+                          </View>
+                          
+                          {/* Time */}
+                          {!event.fullDayEvent && event.startTime && (
+                            <View className="flex-row items-center mb-2">
+                              <Ionicons name="time-outline" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                              <Text
+                                numberOfLines={1}
+                                className={`text-xs ml-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                                ellipsizeMode="tail"
+                              >
+                                {formatTimeTo12Hour(event.startTime)}
+                                {event.endTime ? ` - ${formatTimeTo12Hour(event.endTime)}` : ""}
+                              </Text>
+                            </View>
+                          )}
+                          
+                          {/* Location */}
+                          <View className="flex-row items-center mb-3">
+                            <Ionicons name="location-outline" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                            <Text
+                              numberOfLines={1}
+                              className={`text-xs ml-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                              ellipsizeMode="tail"
+                            >
+                              {event.venue}
+                            </Text>
+                          </View>
+                          
+                          {/* All Tags/Badges */}
+                          <View className="flex-row items-center flex-wrap mb-2" style={{ gap: 6 }}>
+                            {/* Category Badge */}
+                            <View
+                              className="px-2 py-1 rounded-full"
+                              style={{
+                                backgroundColor: isDark ? "rgba(251, 191, 36, 0.2)" : "rgba(251, 191, 36, 0.15)",
+                              }}
+                            >
+                              <Text className={`text-xs font-semibold ${isDark ? "text-yellow-300" : "text-yellow-600"}`}>
+                                {event.category}
+                              </Text>
+                            </View>
+                            
+                            {/* Registered Badge */}
+                            {registered && (
+                              <View
+                                className="px-2 py-1 rounded-full"
+                                style={{
+                                  backgroundColor: isDark ? "rgba(34, 197, 94, 0.2)" : "rgba(34, 197, 94, 0.15)",
+                                }}
+                              >
+                                <Text className={`text-xs font-semibold ${isDark ? "text-green-300" : "text-green-600"}`}>
+                                  JOINED
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          
+                          {/* QR Code Button for Registered Users (if attendance not marked) */}
+                          {registered && !attendanceStatus[event.id] && (
+                            <TouchableOpacity
+                              onPress={() => {
+                                setQrEvent(event);
+                                setShowQRCode(true);
+                              }}
+                              className="flex-row items-center justify-center py-2 rounded-lg mt-1"
+                              style={{
+                                backgroundColor: isDark ? "rgba(34, 197, 94, 0.2)" : "rgba(34, 197, 94, 0.1)",
+                                borderWidth: 1,
+                                borderColor: "rgba(34, 197, 94, 0.3)",
+                              }}
+                            >
+                              <Ionicons name="qr-code-outline" size={14} color="#22c55e" />
+                              <Text className={`text-xs font-semibold ml-1.5 ${isDark ? "text-green-300" : "text-green-600"}`}>
+                                Show QR Code
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          );
+        })()}
+
+        {/* Search and Filters Section */}
+        <View className="px-5 pb-6">
+          {/* Search Bar and Category Filter - Side by Side */}
+          <View className="flex-row mb-4" style={{ gap: 12 }}>
+            {/* Search Bar */}
+            <View style={{ flex: 3 }}>
+              <View
+                className={`flex-row items-center px-4 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"
+                  }`}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  height: 44,
+                }}
+              >
+                <View className={`w-7 h-7 rounded-lg items-center justify-center mr-2 ${isDark ? "bg-gray-700" : "bg-white"}`}>
+                  <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
+                </View>
+                <TextInput
+                  placeholder="Search events..."
+                  placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className={`flex-1 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
+                  style={{ height: 36 }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity 
+                    onPress={() => setSearchQuery("")}
+                    className={`w-6 h-6 rounded-full items-center justify-center ${isDark ? "bg-gray-700" : "bg-gray-200"}`}
+                  >
+                    <Ionicons name="close" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Category Dropdown */}
+            <View style={{ flex: 1, maxWidth: 150 }}>
               <TouchableOpacity
                 onPress={() => {
                   setShowCategoryDropdown(!showCategoryDropdown);
                 }}
-                className={`flex-row items-center justify-between px-3 py-2 rounded-lg ${isDark ? "bg-gray-900" : "bg-white"}`}
+                className={`flex-row items-center justify-between px-2.5 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"}`}
                 style={{
-                  borderWidth: 1,
-                  borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                  borderWidth: 1.5,
+                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  height: 44,
                 }}
               >
-                <Text className={`text-sm font-medium flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
-                  {selectedCategory}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                <View className="flex-row items-center flex-1">
+                  <View className={`w-6 h-6 rounded-lg items-center justify-center mr-1.5 ${isDark ? "bg-gray-700" : "bg-white"}`}>
+                    <Ionicons name="grid" size={12} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  </View>
+                  <Text className={`text-xs font-semibold flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
+                    {selectedCategory}
+                  </Text>
+                </View>
+                <Ionicons 
+                  name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
+                  size={14} 
+                  color={isDark ? "#9ca3af" : "#6b7280"} 
+                />
               </TouchableOpacity>
 
               {/* Category Dropdown Menu */}
               {showCategoryDropdown && (
                 <View
-                  className={`absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
+                  className={`absolute top-full right-0 mt-2 rounded-xl overflow-hidden ${isDark ? "bg-gray-800" : "bg-white"}`}
                   style={{
                     shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 8,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 12,
+                    elevation: 10,
                     zIndex: 1000,
                     maxHeight: 300,
+                    minWidth: 200,
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
                   }}
                 >
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
@@ -337,24 +716,29 @@ export default function Events() {
                           setShowCategoryDropdown(false);
                         }}
                         activeOpacity={0.7}
-                        className={`px-4 py-3 flex-row items-center ${
+                        className={`px-4 py-3.5 flex-row items-center ${
                           selectedCategory === category
                             ? isDark
                               ? "bg-blue-900/30"
                               : "bg-blue-50"
                             : isDark
-                            ? "bg-gray-900"
+                            ? "bg-gray-800"
                             : "bg-white"
                         }`}
+                        style={{
+                          borderBottomWidth: index < categories.length - 1 ? 1 : 0,
+                          borderBottomColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(229, 231, 235, 1)",
+                        }}
                       >
                         {selectedCategory === category && (
-                          <Ionicons name="checkmark" size={18} color="#0EA5E9" style={{ marginRight: 8, flexShrink: 0 }} />
+                          <View className={`w-6 h-6 rounded-full items-center justify-center mr-3 ${isDark ? "bg-blue-600" : "bg-blue-500"}`}>
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          </View>
                         )}
-                        {selectedCategory !== category && <View style={{ width: 26, flexShrink: 0 }} />}
+                        {selectedCategory !== category && <View style={{ width: 38, flexShrink: 0 }} />}
                         <Text 
-                          className={`text-sm flex-1 ${isDark ? "text-gray-100" : "text-gray-900"}`}
-                          numberOfLines={2}
-                          style={{ flexWrap: 'wrap' }}
+                          className={`text-base flex-1 font-medium ${isDark ? "text-white" : "text-gray-900"}`}
+                          numberOfLines={1}
                         >
                           {category}
                         </Text>
@@ -563,16 +947,19 @@ export default function Events() {
 
                     {/* Attendees and Status Row */}
                     <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center">
+                      <View className="flex-row items-center flex-1 mr-2">
                         <Ionicons name="people-outline" size={16} color="#0EA5E9" />
-                        <Text className={`text-sm ml-2 font-medium text-[#0EA5E9]`}>
+                        <Text 
+                          className={`text-sm ml-2 font-medium text-[#0EA5E9]`}
+                          numberOfLines={1}
+                        >
                           {event.participantCount} attending
                         </Text>
                       </View>
 
                       {ended && (
                         <View
-                          className="px-3 py-1.5 rounded-lg"
+                          className="px-3 py-1.5 rounded-lg flex-shrink-0"
                           style={{
                             backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
                           }}
@@ -589,6 +976,21 @@ export default function Events() {
         </View>
       </ScrollView>
 
+      {/* QR Code Modal */}
+      {qrEvent && (
+        <AttendanceQRCode
+          visible={showQRCode}
+          onClose={() => {
+            setShowQRCode(false);
+            setQrEvent(null);
+            // Reload events to update attendance status
+            loadEvents();
+          }}
+          eventId={qrEvent.id}
+          studentId={studentId}
+          eventTitle={qrEvent.title}
+        />
+      )}
     </View>
   );
 }
