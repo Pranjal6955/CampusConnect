@@ -45,6 +45,11 @@ const filesToFix = [
     file: 'Fabric/ShadowTreeCloner.cpp',
     fixes: [
       {
+        // Fix return type: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared
+        pattern: /(Rootstd::shared_ptr<ShadowNode>\s+cloneShadowTreeWithNewProps)/g,
+        replacement: 'RootShadowNode::Unshared cloneShadowTreeWithNewProps'
+      },
+      {
         pattern: /ShadowNode::Unshared/g,
         replacement: 'std::shared_ptr<ShadowNode>'
       },
@@ -62,6 +67,26 @@ const filesToFix = [
     file: 'Fabric/ReanimatedCommitHook.cpp',
     fixes: [
       {
+        // Fix return type: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared - simple replacement
+        pattern: /Rootstd::shared_ptr<ShadowNode>\s+ReanimatedCommitHook::shadowTreeWillCommit/g,
+        replacement: 'RootShadowNode::Unshared ReanimatedCommitHook::shadowTreeWillCommit'
+      },
+      {
+        // Fix parameter: Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared
+        pattern: /Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared'
+      },
+      {
+        // Fix variable: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared (with missing newline)
+        pattern: /(reaShadowNode->unsetReanimatedMountTrait\(\);)(Rootstd::shared_ptr<ShadowNode>\s+rootNode\s*=)/g,
+        replacement: '$1\n  RootShadowNode::Unshared rootNode ='
+      },
+      {
+        // Fix any remaining Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared - simple replacement
+        pattern: /Rootstd::shared_ptr<ShadowNode>/g,
+        replacement: 'RootShadowNode::Unshared'
+      },
+      {
         pattern: /ShadowNode::Shared/g,
         replacement: 'std::shared_ptr<const ShadowNode>'
       },
@@ -74,6 +99,31 @@ const filesToFix = [
   {
     file: 'Fabric/ReanimatedCommitHook.h',
     fixes: [
+      {
+        // Fix missing newline and return type: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared
+        pattern: /(void maybeInitializeLayoutAnimations\(SurfaceId surfaceId\));Rootstd::shared_ptr<ShadowNode>\s+shadowTreeWillCommit/g,
+        replacement: '$1;\n  RootShadowNode::Unshared shadowTreeWillCommit'
+      },
+      {
+        // Fix return type: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared - simple replacement
+        pattern: /Rootstd::shared_ptr<ShadowNode>\s+shadowTreeWillCommit/g,
+        replacement: 'RootShadowNode::Unshared shadowTreeWillCommit'
+      },
+      {
+        // Fix parameter: Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared
+        pattern: /Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared'
+      },
+      {
+        // Fix parameter: std::shared_ptr<const ShadowNode> to RootShadowNode::Shared (in function signature)
+        pattern: /std::shared_ptr<const ShadowNode>\s+const\s+&\s*oldRootShadowNode/g,
+        replacement: 'RootShadowNode::Shared const &oldRootShadowNode'
+      },
+      {
+        // Fix parameter: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared - simple replacement
+        pattern: /Rootstd::shared_ptr<ShadowNode>/g,
+        replacement: 'RootShadowNode::Unshared'
+      },
       {
         pattern: /ShadowNode::Shared/g,
         replacement: 'std::shared_ptr<const ShadowNode>'
@@ -88,6 +138,11 @@ const filesToFix = [
     file: 'Fabric/ShadowTreeCloner.h',
     fixes: [
       {
+        // Fix return type: Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared - simple replacement
+        pattern: /Rootstd::shared_ptr<ShadowNode>/g,
+        replacement: 'RootShadowNode::Unshared'
+      },
+      {
         pattern: /Rootstd::shared_ptr/g,
         replacement: 'std::shared_ptr'
       }
@@ -97,6 +152,12 @@ const filesToFix = [
     file: 'Fabric/ReanimatedMountHook.h',
     fixes: [
       {
+        // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared
+        pattern: /Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared'
+      },
+      {
+        // Fix any remaining Rootstd::shared_ptr
         pattern: /Rootstd::shared_ptr/g,
         replacement: 'std::shared_ptr'
       }
@@ -106,6 +167,17 @@ const filesToFix = [
     file: 'Fabric/ReanimatedMountHook.cpp',
     fixes: [
       {
+        // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared
+        pattern: /Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared'
+      },
+      {
+        // Fix Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared (for return types)
+        pattern: /->\s*Rootstd::shared_ptr<ShadowNode>/g,
+        replacement: '-> RootShadowNode::Unshared'
+      },
+      {
+        // Fix any remaining Rootstd::shared_ptr
         pattern: /Rootstd::shared_ptr/g,
         replacement: 'std::shared_ptr'
       }
@@ -116,13 +188,19 @@ const filesToFix = [
     fixes: [
       {
         // Fix rawProps access - in RN 0.81.5, props don't have rawProps
+        // Replace folly::dynamic::merge with folly::merge_patch and fix rawProps
+        pattern: /folly::dynamic::merge\s*\(\s*([^,]+)->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g,
+        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)'
+      },
+      {
+        // Fix rawProps access - in RN 0.81.5, props don't have rawProps
         // Replace the entire merge_patch call with just the second argument
         pattern: /folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g,
-        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))'
+        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)'
       },
       {
         pattern: /folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g,
-        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))'
+        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)'
       },
       {
         // Fallback: just replace ->props->rawProps
@@ -139,9 +217,19 @@ const filesToFix = [
     file: 'Fabric/ReanimatedMountHook.h',
     fixes: [
       {
-        // Fix function signature to use RootShadowNode::Shared
+        // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared - simple replacement
+        pattern: /Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared'
+      },
+      {
+        // Fix function signature to use RootShadowNode::Shared (fallback for std::shared_ptr)
         pattern: /(\s+void\s+shadowTreeDidMount\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*rootShadowNode)/g,
         replacement: '$1RootShadowNode::Shared$2'
+      },
+      {
+        // Catch any remaining Rootstd::shared_ptr
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
       }
     ]
   },
@@ -189,9 +277,39 @@ const filesToFix = [
     file: 'Fabric/ReanimatedMountHook.cpp',
     fixes: [
       {
-        // Fix function signature to use RootShadowNode::Shared
+        // Fix const Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared const
+        pattern: /const\s+Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared const'
+      },
+      {
+        // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared - simple replacement
+        pattern: /Rootstd::shared_ptr<const ShadowNode>/g,
+        replacement: 'RootShadowNode::Shared'
+      },
+      {
+        // Fix return type in lambda: -> Rootstd::shared_ptr<ShadowNode> to -> RootShadowNode::Unshared
+        pattern: /->\s*Rootstd::shared_ptr<ShadowNode>/g,
+        replacement: '-> RootShadowNode::Unshared'
+      },
+      {
+        // Fix function signature to use RootShadowNode::Shared (alternative pattern)
         pattern: /(\s+void\s+ReanimatedMountHook::shadowTreeDidMount\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*rootShadowNode)/g,
         replacement: '$1RootShadowNode::Shared$2'
+      },
+      {
+        // Fix double mountTime parameter to HighResTimeStamp
+        pattern: /(\s+void\s+ReanimatedMountHook::shadowTreeDidMount\s*\([^,)]+,\s*)double(\s*\)\s+noexcept)/g,
+        replacement: '$1HighResTimeStamp mountTime$2'
+      },
+      {
+        // Catch any remaining Rootstd::shared_ptr<ShadowNode>
+        pattern: /Rootstd::shared_ptr<ShadowNode>/g,
+        replacement: 'RootShadowNode::Unshared'
+      },
+      {
+        // Catch any remaining Rootstd::shared_ptr
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
       }
     ]
   },
@@ -199,7 +317,9 @@ const filesToFix = [
     file: 'Fabric/ReanimatedCommitHook.cpp',
     fixes: [
       {
-        // Fix function signature to use RootShadowNode::Shared
+        // Fix function signature to use RootShadowNode types - this is already handled above
+        // but we need to ensure the signature matches the base class
+        // The base class expects: RootShadowNode::Unshared shadowTreeWillCommit(ShadowTree const &, RootShadowNode::Shared const &, RootShadowNode::Unshared const &)
         pattern: /(\s+std::shared_ptr<ShadowNode>\s+ReanimatedCommitHook::shadowTreeWillCommit\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*oldRootShadowNode)/g,
         replacement: '$1RootShadowNode::Shared$2'
       },
@@ -249,6 +369,17 @@ function findAndFixAllFiles(basePath) {
           
           // Apply all common fixes
           if (content.includes('Rootstd::shared_ptr')) {
+            // Fix missing newline in ReanimatedCommitHook.h
+            newContent = newContent.replace(/(void maybeInitializeLayoutAnimations\(SurfaceId surfaceId\));Rootstd::shared_ptr<ShadowNode>\s+shadowTreeWillCommit/g, '$1;\n  RootShadowNode::Unshared shadowTreeWillCommit');
+            // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared
+            newContent = newContent.replace(/Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared');
+            // Fix Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared (for return types and variables)
+            newContent = newContent.replace(/Rootstd::shared_ptr<ShadowNode>/g, 'RootShadowNode::Unshared');
+            // Fix const Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared const
+            newContent = newContent.replace(/const\s+Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared const');
+            // Fix -> Rootstd::shared_ptr<ShadowNode> to -> RootShadowNode::Unshared
+            newContent = newContent.replace(/->\s*Rootstd::shared_ptr<ShadowNode>/g, '-> RootShadowNode::Unshared');
+            // Fix any remaining Rootstd::shared_ptr
             newContent = newContent.replace(/Rootstd::shared_ptr/g, 'std::shared_ptr');
             modified = true;
           }
@@ -268,11 +399,13 @@ function findAndFixAllFiles(basePath) {
             modified = true;
           }
           
-          if (content.includes('->props->rawProps') || content.includes('.props->rawProps') || content.includes('->props, (folly::dynamic)')) {
+          if (content.includes('->props->rawProps') || content.includes('.props->rawProps') || content.includes('->props, (folly::dynamic)') || content.includes('folly::dynamic::merge')) {
             // Fix rawProps access - in RN 0.81.5, props don't have rawProps
-            // Replace merge_patch calls first
-            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))');
-            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))');
+            // Replace folly::dynamic::merge with folly::merge_patch first
+            newContent = newContent.replace(/folly::dynamic::merge\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)');
+            // Replace merge_patch calls
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)');
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)');
             // Then handle general cases
             newContent = newContent.replace(/->props->rawProps/g, 'folly::dynamic()');
             newContent = newContent.replace(/\.props->rawProps/g, 'folly::dynamic()');
