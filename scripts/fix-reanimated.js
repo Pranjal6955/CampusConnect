@@ -116,7 +116,16 @@ const filesToFix = [
     fixes: [
       {
         // Fix rawProps access - in RN 0.81.5, props don't have rawProps
-        // Replace with empty folly::dynamic() since we can't access raw props anymore
+        // Replace the entire merge_patch call with just the second argument
+        pattern: /folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g,
+        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))'
+      },
+      {
+        pattern: /folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g,
+        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))'
+      },
+      {
+        // Fallback: just replace ->props->rawProps
         pattern: /->props->rawProps/g,
         replacement: 'folly::dynamic()'
       },
@@ -127,11 +136,76 @@ const filesToFix = [
     ]
   },
   {
+    file: 'Fabric/ReanimatedMountHook.h',
+    fixes: [
+      {
+        // Fix function signature to use RootShadowNode::Shared
+        pattern: /(\s+void\s+shadowTreeDidMount\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*rootShadowNode)/g,
+        replacement: '$1RootShadowNode::Shared$2'
+      }
+    ]
+  },
+  {
+    file: 'Fabric/ReanimatedCommitHook.h',
+    fixes: [
+      {
+        // Fix function signature to use RootShadowNode::Shared
+        pattern: /(\s+std::shared_ptr<ShadowNode>\s+shadowTreeWillCommit\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*oldRootShadowNode)/g,
+        replacement: '$1RootShadowNode::Shared$2'
+      },
+      {
+        pattern: /(\s+std::shared_ptr<ShadowNode>\s+shadowTreeWillCommit\s*\([^,]+,\s*)std::shared_ptr<ShadowNode>(\s+const\s+&\s*newRootShadowNode)/g,
+        replacement: '$1RootShadowNode::Unshared$2'
+      }
+    ]
+  },
+  {
     file: 'NativeModules/ReanimatedModuleProxy.h',
     fixes: [
       {
         pattern: /ShadowNode::Shared/g,
         replacement: 'std::shared_ptr<const ShadowNode>'
+      }
+    ]
+  },
+  {
+    file: 'NativeModules/ReanimatedModuleProxy.cpp',
+    fixes: [
+      {
+        // Fix shadowNodeFromValue - it seems to have been removed in RN 0.81.5
+        // We'll need to handle this case by case, but for now try to use shadowNodeListFromValue
+        // and extract the first element if it's a single node
+        pattern: /shadowNodeFromValue\s*\(/g,
+        replacement: 'shadowNodeListFromValue('
+      },
+      {
+        // Fix return types for shadowTreeWillCommit
+        pattern: /(\s+std::shared_ptr<ShadowNode>\s+shadowTreeWillCommit)/g,
+        replacement: '$1'
+      }
+    ]
+  },
+  {
+    file: 'Fabric/ReanimatedMountHook.cpp',
+    fixes: [
+      {
+        // Fix function signature to use RootShadowNode::Shared
+        pattern: /(\s+void\s+ReanimatedMountHook::shadowTreeDidMount\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*rootShadowNode)/g,
+        replacement: '$1RootShadowNode::Shared$2'
+      }
+    ]
+  },
+  {
+    file: 'Fabric/ReanimatedCommitHook.cpp',
+    fixes: [
+      {
+        // Fix function signature to use RootShadowNode::Shared
+        pattern: /(\s+std::shared_ptr<ShadowNode>\s+ReanimatedCommitHook::shadowTreeWillCommit\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*oldRootShadowNode)/g,
+        replacement: '$1RootShadowNode::Shared$2'
+      },
+      {
+        pattern: /(\s+std::shared_ptr<ShadowNode>\s+ReanimatedCommitHook::shadowTreeWillCommit\s*\([^,]+,\s*)std::shared_ptr<ShadowNode>(\s+const\s+&\s*newRootShadowNode)/g,
+        replacement: '$1RootShadowNode::Unshared$2'
       }
     ]
   }
@@ -194,12 +268,34 @@ function findAndFixAllFiles(basePath) {
             modified = true;
           }
           
-          if (content.includes('->props->rawProps') || content.includes('.props->rawProps')) {
+          if (content.includes('->props->rawProps') || content.includes('.props->rawProps') || content.includes('->props, (folly::dynamic)')) {
             // Fix rawProps access - in RN 0.81.5, props don't have rawProps
-            // Replace with empty folly::dynamic() since we can't access raw props anymore
+            // Replace merge_patch calls first
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))');
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps))');
+            // Then handle general cases
             newContent = newContent.replace(/->props->rawProps/g, 'folly::dynamic()');
             newContent = newContent.replace(/\.props->rawProps/g, 'folly::dynamic()');
             modified = true;
+          }
+          
+          // Fix function signatures to use RootShadowNode::Shared
+          if (content.includes('shadowTreeDidMount') && content.includes('std::shared_ptr<const ShadowNode> const &rootShadowNode')) {
+            newContent = newContent.replace(/(\s+void\s+shadowTreeDidMount\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*rootShadowNode)/g, '$1RootShadowNode::Shared$2');
+            modified = true;
+          }
+          
+          if (content.includes('shadowTreeWillCommit') && content.includes('std::shared_ptr<const ShadowNode>')) {
+            newContent = newContent.replace(/(\s+std::shared_ptr<ShadowNode>\s+shadowTreeWillCommit\s*\(\s*)std::shared_ptr<const ShadowNode>(\s+const\s+&\s*oldRootShadowNode)/g, '$1RootShadowNode::Shared$2');
+            newContent = newContent.replace(/(\s+std::shared_ptr<ShadowNode>\s+shadowTreeWillCommit\s*\([^,]+,\s*)std::shared_ptr<ShadowNode>(\s+const\s+&\s*newRootShadowNode)/g, '$1RootShadowNode::Unshared$2');
+            modified = true;
+          }
+          
+          // Fix shadowNodeFromValue calls
+          if (content.includes('shadowNodeFromValue')) {
+            // This is a complex fix - shadowNodeFromValue was removed in RN 0.81.5
+            // We'll need to handle this more carefully, but for now just log it
+            console.warn(`⚠ Found shadowNodeFromValue in ${path.relative(reanimatedBasePath, filePath)} - may need manual fix`);
           }
           
           if (content.includes('double mountTime') && !content.includes('HighResTimeStamp mountTime')) {
