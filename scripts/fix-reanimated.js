@@ -188,19 +188,24 @@ const filesToFix = [
     fixes: [
       {
         // Fix rawProps access - in RN 0.81.5, props don't have rawProps
-        // Replace folly::dynamic::merge with folly::merge_patch and fix rawProps
-        pattern: /folly::dynamic::merge\s*\(\s*([^,]+)->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g,
-        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)'
+        // Replace folly::merge_patch with folly::dynamic::merge (merge_patch doesn't exist in RN 0.81.5)
+        pattern: /folly::merge_patch\s*\(\s*folly::dynamic\(\)\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g,
+        replacement: 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)'
       },
       {
-        // Fix rawProps access - in RN 0.81.5, props don't have rawProps
-        // Replace the entire merge_patch call with just the second argument
+        // Fix rawProps access - replace any merge_patch with dynamic::merge
         pattern: /folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g,
-        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)'
+        replacement: 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)'
       },
       {
         pattern: /folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g,
-        replacement: 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)'
+        replacement: 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)'
+      },
+      {
+        // Fix rawProps access - in RN 0.81.5, props don't have rawProps
+        // Replace folly::dynamic::merge with just the second argument
+        pattern: /folly::dynamic::merge\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g,
+        replacement: 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)'
       },
       {
         // Fallback: just replace ->props->rawProps
@@ -367,19 +372,19 @@ function findAndFixAllFiles(basePath) {
           let modified = false;
           let newContent = content;
           
-          // Apply all common fixes
+          // Apply all common fixes - MUST be done in order
           if (content.includes('Rootstd::shared_ptr')) {
             // Fix missing newline in ReanimatedCommitHook.h
             newContent = newContent.replace(/(void maybeInitializeLayoutAnimations\(SurfaceId surfaceId\));Rootstd::shared_ptr<ShadowNode>\s+shadowTreeWillCommit/g, '$1;\n  RootShadowNode::Unshared shadowTreeWillCommit');
-            // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared
+            // Fix const Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared const (must come before generic)
+            newContent = newContent.replace(/const\s+Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared const');
+            // Fix Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared (must come before generic)
             newContent = newContent.replace(/Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared');
+            // Fix -> Rootstd::shared_ptr<ShadowNode> to -> RootShadowNode::Unshared (must come before generic)
+            newContent = newContent.replace(/->\s*Rootstd::shared_ptr<ShadowNode>/g, '-> RootShadowNode::Unshared');
             // Fix Rootstd::shared_ptr<ShadowNode> to RootShadowNode::Unshared (for return types and variables)
             newContent = newContent.replace(/Rootstd::shared_ptr<ShadowNode>/g, 'RootShadowNode::Unshared');
-            // Fix const Rootstd::shared_ptr<const ShadowNode> to RootShadowNode::Shared const
-            newContent = newContent.replace(/const\s+Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared const');
-            // Fix -> Rootstd::shared_ptr<ShadowNode> to -> RootShadowNode::Unshared
-            newContent = newContent.replace(/->\s*Rootstd::shared_ptr<ShadowNode>/g, '-> RootShadowNode::Unshared');
-            // Fix any remaining Rootstd::shared_ptr
+            // Fix any remaining Rootstd::shared_ptr (catch-all)
             newContent = newContent.replace(/Rootstd::shared_ptr/g, 'std::shared_ptr');
             modified = true;
           }
@@ -399,13 +404,14 @@ function findAndFixAllFiles(basePath) {
             modified = true;
           }
           
-          if (content.includes('->props->rawProps') || content.includes('.props->rawProps') || content.includes('->props, (folly::dynamic)') || content.includes('folly::dynamic::merge')) {
+          if (content.includes('->props->rawProps') || content.includes('.props->rawProps') || content.includes('->props, (folly::dynamic)') || content.includes('folly::dynamic::merge') || content.includes('folly::merge_patch')) {
             // Fix rawProps access - in RN 0.81.5, props don't have rawProps
-            // Replace folly::dynamic::merge with folly::merge_patch first
-            newContent = newContent.replace(/folly::dynamic::merge\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)');
-            // Replace merge_patch calls
-            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)');
-            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::merge_patch(folly::dynamic(), (folly::dynamic)*rawProps)');
+            // Replace folly::merge_patch with folly::dynamic::merge (merge_patch doesn't exist in RN 0.81.5)
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*folly::dynamic\(\)\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
+            newContent = newContent.replace(/folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
+            // Replace folly::dynamic::merge with just the second argument when accessing rawProps
+            newContent = newContent.replace(/folly::dynamic::merge\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
             // Then handle general cases
             newContent = newContent.replace(/->props->rawProps/g, 'folly::dynamic()');
             newContent = newContent.replace(/\.props->rawProps/g, 'folly::dynamic()');
@@ -477,8 +483,16 @@ function fixFile(filePath, fixes, fileName, checkIncludes = false) {
     let modified = false;
 
     for (const fix of fixes) {
-      if (fix.pattern.test(content)) {
-        content = content.replace(fix.pattern, fix.replacement);
+      const beforeContent = content;
+      // Use replaceAll if available, otherwise use replace with global flag
+      if (String.prototype.replaceAll) {
+        content = content.replaceAll(fix.pattern, fix.replacement);
+      } else {
+        // Ensure pattern has global flag for replace to work on all matches
+        const globalPattern = fix.pattern.global ? fix.pattern : new RegExp(fix.pattern.source, fix.pattern.flags + 'g');
+        content = content.replace(globalPattern, fix.replacement);
+      }
+      if (content !== beforeContent) {
         modified = true;
       }
     }
@@ -529,7 +543,65 @@ if (fs.existsSync(reanimatedBasePath)) {
   
   let fixedCount = 0;
   
-  // Fix specific files
+  // First, apply aggressive fixes to ALL files to catch Rootstd::shared_ptr
+  console.log('Applying comprehensive fixes to all files...');
+  const allCppFiles = [];
+  function findAllCppFiles(dir) {
+    const files = fs.readdirSync(dir);
+    files.forEach(file => {
+      const filePath = path.join(dir, file);
+      const stat = fs.statSync(filePath);
+      if (stat.isDirectory()) {
+        findAllCppFiles(filePath);
+      } else if (file.endsWith('.cpp') || file.endsWith('.h') || file.endsWith('.hpp')) {
+        allCppFiles.push(filePath);
+      }
+    });
+  }
+  
+  try {
+    findAllCppFiles(reanimatedBasePath);
+    allCppFiles.forEach(filePath => {
+      try {
+        let content = fs.readFileSync(filePath, 'utf8');
+        let modified = false;
+        const originalContent = content;
+        
+        // Apply Rootstd::shared_ptr fixes in correct order
+        if (content.includes('Rootstd::shared_ptr')) {
+          // Fix const Rootstd::shared_ptr<const ShadowNode> first
+          content = content.replace(/const\s+Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared const');
+          // Fix Rootstd::shared_ptr<const ShadowNode>
+          content = content.replace(/Rootstd::shared_ptr<const ShadowNode>/g, 'RootShadowNode::Shared');
+          // Fix -> Rootstd::shared_ptr<ShadowNode>
+          content = content.replace(/->\s*Rootstd::shared_ptr<ShadowNode>/g, '-> RootShadowNode::Unshared');
+          // Fix Rootstd::shared_ptr<ShadowNode>
+          content = content.replace(/Rootstd::shared_ptr<ShadowNode>/g, 'RootShadowNode::Unshared');
+          // Fix any remaining Rootstd::shared_ptr
+          content = content.replace(/Rootstd::shared_ptr/g, 'std::shared_ptr');
+          modified = true;
+        }
+        
+        // Fix folly::merge_patch to folly::dynamic::merge
+        if (content.includes('folly::merge_patch')) {
+          content = content.replace(/folly::merge_patch\s*\(\s*folly::dynamic\(\)\s*,\s*\(folly::dynamic\)\s*\*rawProps\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
+          content = content.replace(/folly::merge_patch\s*\(\s*[^,]+->props->rawProps\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
+          content = content.replace(/folly::merge_patch\s*\(\s*[^,]+->props\s*,\s*\(folly::dynamic\)\s*\*rawProps\)\s*\)/g, 'folly::dynamic::merge(folly::dynamic(), (folly::dynamic)*rawProps)');
+          modified = true;
+        }
+        
+        if (modified && content !== originalContent) {
+          fs.writeFileSync(filePath, content, 'utf8');
+        }
+      } catch (error) {
+        // Skip files that can't be read/written
+      }
+    });
+  } catch (error) {
+    // Ignore errors
+  }
+  
+  // Fix specific files with detailed patterns
   for (const fileConfig of filesToFix) {
     const filePath = path.join(reanimatedBasePath, fileConfig.file);
     if (fixFile(filePath, fileConfig.fixes, fileConfig.file, fileConfig.checkIncludes)) {
