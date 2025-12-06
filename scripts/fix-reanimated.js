@@ -51,6 +51,10 @@ const filesToFix = [
       {
         pattern: /ShadowNode::ListOfShared/g,
         replacement: 'std::vector<std::shared_ptr<const ShadowNode>>'
+      },
+      {
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
       }
     ]
   },
@@ -60,11 +64,68 @@ const filesToFix = [
       {
         pattern: /ShadowNode::Shared/g,
         replacement: 'std::shared_ptr<const ShadowNode>'
+      },
+      {
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
       }
     ]
   },
   {
     file: 'Fabric/ReanimatedCommitHook.h',
+    fixes: [
+      {
+        pattern: /ShadowNode::Shared/g,
+        replacement: 'std::shared_ptr<const ShadowNode>'
+      },
+      {
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
+      }
+    ]
+  },
+  {
+    file: 'Fabric/ShadowTreeCloner.h',
+    fixes: [
+      {
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
+      }
+    ]
+  },
+  {
+    file: 'Fabric/ReanimatedMountHook.h',
+    fixes: [
+      {
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
+      }
+    ]
+  },
+  {
+    file: 'Fabric/ReanimatedMountHook.cpp',
+    fixes: [
+      {
+        pattern: /Rootstd::shared_ptr/g,
+        replacement: 'std::shared_ptr'
+      }
+    ]
+  },
+  {
+    file: 'LayoutAnimations/LayoutAnimationsProxy.cpp',
+    fixes: [
+      {
+        pattern: /->props->rawProps/g,
+        replacement: '->props'
+      },
+      {
+        pattern: /\.props->rawProps/g,
+        replacement: '.props'
+      }
+    ]
+  },
+  {
+    file: 'NativeModules/ReanimatedModuleProxy.h',
     fixes: [
       {
         pattern: /ShadowNode::Shared/g,
@@ -96,9 +157,13 @@ function findAndFixAllFiles(basePath) {
   }
   
   try {
-    const fabricPath = path.join(basePath, 'Fabric');
-    if (fs.existsSync(fabricPath)) {
-      const allFiles = walkDir(fabricPath);
+    // Search in Fabric, LayoutAnimations, and NativeModules directories
+    const directoriesToSearch = ['Fabric', 'LayoutAnimations', 'NativeModules'];
+    
+    directoriesToSearch.forEach(dirName => {
+      const dirPath = path.join(basePath, dirName);
+      if (fs.existsSync(dirPath)) {
+        const allFiles = walkDir(dirPath);
       
       allFiles.forEach(filePath => {
         try {
@@ -107,6 +172,11 @@ function findAndFixAllFiles(basePath) {
           let newContent = content;
           
           // Apply all common fixes
+          if (content.includes('Rootstd::shared_ptr')) {
+            newContent = newContent.replace(/Rootstd::shared_ptr/g, 'std::shared_ptr');
+            modified = true;
+          }
+          
           if (content.includes('ShadowNode::Shared')) {
             newContent = newContent.replace(/ShadowNode::Shared/g, 'std::shared_ptr<const ShadowNode>');
             modified = true;
@@ -119,6 +189,12 @@ function findAndFixAllFiles(basePath) {
           
           if (content.includes('ShadowNode::ListOfShared')) {
             newContent = newContent.replace(/ShadowNode::ListOfShared/g, 'std::vector<std::shared_ptr<const ShadowNode>>');
+            modified = true;
+          }
+          
+          if (content.includes('->props->rawProps') || content.includes('.props->rawProps')) {
+            newContent = newContent.replace(/->props->rawProps/g, '->props');
+            newContent = newContent.replace(/\.props->rawProps/g, '.props');
             modified = true;
           }
           
@@ -149,7 +225,8 @@ function findAndFixAllFiles(basePath) {
           // Skip files that can't be read/written
         }
       });
-    }
+      }
+    });
   } catch (error) {
     // Ignore errors in directory walking
   }
