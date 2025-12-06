@@ -115,12 +115,14 @@ const filesToFix = [
     file: 'LayoutAnimations/LayoutAnimationsProxy.cpp',
     fixes: [
       {
+        // Fix rawProps access - in RN 0.81.5, props don't have rawProps
+        // Replace with empty folly::dynamic() since we can't access raw props anymore
         pattern: /->props->rawProps/g,
-        replacement: '->props'
+        replacement: 'folly::dynamic()'
       },
       {
         pattern: /\.props->rawProps/g,
-        replacement: '.props'
+        replacement: 'folly::dynamic()'
       }
     ]
   },
@@ -193,8 +195,10 @@ function findAndFixAllFiles(basePath) {
           }
           
           if (content.includes('->props->rawProps') || content.includes('.props->rawProps')) {
-            newContent = newContent.replace(/->props->rawProps/g, '->props');
-            newContent = newContent.replace(/\.props->rawProps/g, '.props');
+            // Fix rawProps access - in RN 0.81.5, props don't have rawProps
+            // Replace with empty folly::dynamic() since we can't access raw props anymore
+            newContent = newContent.replace(/->props->rawProps/g, 'folly::dynamic()');
+            newContent = newContent.replace(/\.props->rawProps/g, 'folly::dynamic()');
             modified = true;
           }
           
