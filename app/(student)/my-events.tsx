@@ -1,7 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
-import { useColorScheme } from "nativewind";
-import { useCallback, useEffect, useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
+import { useColorScheme } from 'nativewind';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,71 +11,94 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from "react-native";
-import { useTranslation } from "react-i18next";
-import { auth } from "../../config/firebase";
+  View,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { auth } from '../../config/firebase';
 import {
   checkUpcomingEvents,
   Event,
   getStudentEvents,
-} from "../../utils/events";
-import { getUserProfile } from "../../utils/user";
+} from '../../utils/events';
+import { getUserProfile } from '../../utils/user';
 
 export default function MyEvents() {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === 'dark';
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
-  const studentId = auth.currentUser?.uid || "";
+  const studentId = auth.currentUser?.uid || '';
 
-  const categories = ["All", "Club Event", "Seminar", "Sports", "Cultural", "Workshop", "Fest", "Hackathon"];
-  const statusFilters = ["All", "Upcoming", "Ongoing", "Completed"];
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Club Event": return "people";
-      case "Seminar": return "mic";
-      case "Sports": return "basketball";
-      case "Cultural": return "musical-notes";
-      case "Workshop": return "construct";
-      case "Fest": return "party-popper";
-      case "Hackathon": return "code-slash";
-      default: return "calendar";
-    }
-  };
+  const categories = [
+    'All',
+    'Club Event',
+    'Seminar',
+    'Sports',
+    'Cultural',
+    'Workshop',
+    'Fest',
+    'Hackathon',
+  ];
+  const statusFilters = ['All', 'Upcoming', 'Ongoing', 'Completed'];
 
   // Convert 24-hour format (HH:MM) to 12-hour format with AM/PM
   const formatTimeTo12Hour = (time24: string | undefined): string => {
-    if (!time24) return "";
-    const [hours, minutes] = time24.split(":").map(Number);
-    const period = hours >= 12 ? "PM" : "AM";
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
     const hours12 = hours % 12 || 12;
-    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, "0");
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = date.getDate().toString().padStart(2, '0');
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     const month = months[date.getMonth()];
     return { day, month };
   };
 
+  // Removed unused formatDate function
+
   // Format date as "Mon, Dec 1, 2025"
   const formatDateFull = (dateString: string): string => {
     const date = new Date(dateString);
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     const weekday = weekdays[date.getDay()];
     const month = months[date.getMonth()];
     const day = date.getDate();
@@ -83,36 +106,11 @@ export default function MyEvents() {
     return `${weekday}, ${month} ${day}, ${year}`;
   };
 
-  // Calculate time elapsed (e.g., "3 days ago", "8 hours ago")
-  const getTimeElapsed = (dateString: string, timeString?: string): string => {
-    const date = new Date(dateString);
-    if (timeString) {
-      const [hours, minutes] = timeString.split(":").map(Number);
-      date.setHours(hours, minutes, 0, 0);
-    }
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
-
-    if (diffYears > 0) return `${diffYears} ${diffYears === 1 ? "year" : "years"} ago`;
-    if (diffMonths > 0) return `${diffMonths} ${diffMonths === 1 ? "month" : "months"} ago`;
-    if (diffWeeks > 0) return `${diffWeeks} ${diffWeeks === 1 ? "week" : "weeks"} ago`;
-    if (diffDays > 0) return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
-    if (diffHours > 0) return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
-    if (diffMins > 0) return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
-    return "Just now";
-  };
-
   // Check if event has ended
   const isEventEnded = (event: Event): boolean => {
     const endDate = new Date(event.endDate);
     if (event.endTime && !event.fullDayEvent) {
-      const [hours, minutes] = event.endTime.split(":").map(Number);
+      const [hours, minutes] = event.endTime.split(':').map(Number);
       endDate.setHours(hours, minutes, 0, 0);
     } else {
       endDate.setHours(23, 59, 59, 999);
@@ -124,7 +122,7 @@ export default function MyEvents() {
   const isEventUpcoming = (event: Event): boolean => {
     const startDate = new Date(event.startDate);
     if (event.startTime && !event.fullDayEvent) {
-      const [hours, minutes] = event.startTime.split(":").map(Number);
+      const [hours, minutes] = event.startTime.split(':').map(Number);
       startDate.setHours(hours, minutes, 0, 0);
     } else {
       startDate.setHours(0, 0, 0, 0);
@@ -142,21 +140,21 @@ export default function MyEvents() {
     const now = new Date();
     const startDate = new Date(event.startDate);
     const endDate = new Date(event.endDate);
-    
+
     if (event.startTime && !event.fullDayEvent) {
-      const [startHours, startMinutes] = event.startTime.split(":").map(Number);
+      const [startHours, startMinutes] = event.startTime.split(':').map(Number);
       startDate.setHours(startHours, startMinutes, 0, 0);
     } else {
       startDate.setHours(0, 0, 0, 0);
     }
-    
+
     if (event.endTime && !event.fullDayEvent) {
-      const [endHours, endMinutes] = event.endTime.split(":").map(Number);
+      const [endHours, endMinutes] = event.endTime.split(':').map(Number);
       endDate.setHours(endHours, endMinutes, 0, 0);
     } else {
       endDate.setHours(23, 59, 59, 999);
     }
-    
+
     return now >= startDate && now <= endDate;
   };
 
@@ -164,46 +162,48 @@ export default function MyEvents() {
   const getTimeRemaining = (event: Event): string => {
     const now = new Date();
     const startDate = new Date(event.startDate);
-    
+
     // Set the start time if event has a specific time
     if (event.startTime && !event.fullDayEvent) {
-      const [hours, minutes] = event.startTime.split(":").map(Number);
+      const [hours, minutes] = event.startTime.split(':').map(Number);
       startDate.setHours(hours, minutes, 0, 0);
     } else {
       startDate.setHours(0, 0, 0, 0);
     }
-    
+
     const diffMs = startDate.getTime() - now.getTime();
-    
+
     // If event has already started or ended
     if (diffMs <= 0) {
       if (isEventOngoing(event)) {
-        return t("events.ongoing");
+        return t('events.ongoing');
       }
-      return t("events.completed");
+      return t('events.completed');
     }
-    
+
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-    
+
     const remainingHours = diffHours % 24;
     const remainingMins = diffMins % 60;
-    
+
     // Format: "X days, Y hours, Z min left"
     const parts: string[] = [];
-    
+
     if (diffDays > 0) {
-      parts.push(`${diffDays} ${diffDays === 1 ? "day" : "days"}`);
+      parts.push(`${diffDays} ${diffDays === 1 ? 'day' : 'days'}`);
     }
     if (remainingHours > 0) {
-      parts.push(`${remainingHours} ${remainingHours === 1 ? "hour" : "hours"}`);
+      parts.push(
+        `${remainingHours} ${remainingHours === 1 ? 'hour' : 'hours'}`
+      );
     }
     if (remainingMins > 0 || parts.length === 0) {
-      parts.push(`${remainingMins} ${remainingMins === 1 ? "min" : "min"}`);
+      parts.push(`${remainingMins} ${remainingMins === 1 ? 'min' : 'min'}`);
     }
-    
-    return parts.join(", ") + " " + t("time.left");
+
+    return parts.join(', ') + ' ' + t('time.left');
   };
 
   useEffect(() => {
@@ -225,23 +225,26 @@ export default function MyEvents() {
     let filtered = events;
 
     if (searchQuery) {
-      filtered = filtered.filter(event =>
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.venue.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (event) =>
+          event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          event.venue.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    if (selectedCategory !== "All") {
-      filtered = filtered.filter(event => event.category === selectedCategory);
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(
+        (event) => event.category === selectedCategory
+      );
     }
 
-    if (selectedStatus !== "All") {
-      if (selectedStatus === "Upcoming") {
-        filtered = filtered.filter(event => isEventUpcoming(event));
-      } else if (selectedStatus === "Ongoing") {
-        filtered = filtered.filter(event => isEventOngoing(event));
-      } else if (selectedStatus === "Completed") {
-        filtered = filtered.filter(event => isEventCompleted(event));
+    if (selectedStatus !== 'All') {
+      if (selectedStatus === 'Upcoming') {
+        filtered = filtered.filter((event) => isEventUpcoming(event));
+      } else if (selectedStatus === 'Ongoing') {
+        filtered = filtered.filter((event) => isEventOngoing(event));
+      } else if (selectedStatus === 'Completed') {
+        filtered = filtered.filter((event) => isEventCompleted(event));
       }
     }
 
@@ -258,7 +261,7 @@ export default function MyEvents() {
         }
       }
     } catch (error) {
-      console.error("Error loading user data:", error);
+      console.error('Error loading user data:', error);
     }
   };
 
@@ -270,11 +273,11 @@ export default function MyEvents() {
       // Check for upcoming events starting soon
       if (studentId) {
         checkUpcomingEvents(studentId).catch((err) =>
-          console.error("Error checking upcoming events:", err)
+          console.error('Error checking upcoming events:', err)
         );
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to load events");
+      Alert.alert('Error', 'Failed to load events');
       console.error(error);
     } finally {
       setLoading(false);
@@ -293,27 +296,35 @@ export default function MyEvents() {
 
   if (loading) {
     return (
-      <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center`}>
+      <View
+        className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'} justify-center items-center`}
+      >
         <ActivityIndicator size="large" color="#0EA5E9" />
       </View>
     );
   }
 
   return (
-    <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"}`}>
+    <View className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'}`}>
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0EA5E9" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0EA5E9"
+          />
         }
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         {/* Header Section */}
         <View className="px-5 pt-16 pb-6">
           <View className="mb-6">
-            <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              {t("tabs.myEvents")}
+            <Text
+              className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+            >
+              {t('tabs.myEvents')}
             </Text>
           </View>
 
@@ -322,31 +333,44 @@ export default function MyEvents() {
             {/* Search Bar */}
             <View style={{ flex: 3 }}>
               <View
-                className={`flex-row items-center px-4 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"
-                  }`}
+                className={`flex-row items-center px-4 rounded-xl ${
+                  isDark ? 'bg-gray-800/50' : 'bg-gray-100'
+                }`}
                 style={{
                   borderWidth: 1.5,
-                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  borderColor: isDark
+                    ? 'rgba(107, 114, 128, 0.3)'
+                    : 'rgba(229, 231, 235, 1)',
                   height: 44,
                 }}
               >
-                <View className={`w-7 h-7 rounded-lg items-center justify-center mr-2 ${isDark ? "bg-gray-700" : "bg-white"}`}>
-                  <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
+                <View
+                  className={`w-7 h-7 rounded-lg items-center justify-center mr-2 ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                >
+                  <Ionicons
+                    name="search"
+                    size={16}
+                    color={isDark ? '#9ca3af' : '#6b7280'}
+                  />
                 </View>
                 <TextInput
-                  placeholder={t("events.searchEvents")}
-                  placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
+                  placeholder={t('events.searchEvents')}
+                  placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  className={`flex-1 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
+                  className={`flex-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
                   style={{ height: 36 }}
                 />
                 {searchQuery.length > 0 && (
-                  <TouchableOpacity 
-                    onPress={() => setSearchQuery("")}
-                    className={`w-6 h-6 rounded-full items-center justify-center ${isDark ? "bg-gray-700" : "bg-gray-200"}`}
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    className={`w-6 h-6 rounded-full items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
                   >
-                    <Ionicons name="close" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                    <Ionicons
+                      name="close"
+                      size={14}
+                      color={isDark ? '#9ca3af' : '#6b7280'}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -358,34 +382,45 @@ export default function MyEvents() {
                 onPress={() => {
                   setShowCategoryDropdown(!showCategoryDropdown);
                 }}
-                className={`flex-row items-center justify-between px-2.5 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"}`}
+                className={`flex-row items-center justify-between px-2.5 rounded-xl ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}
                 style={{
                   borderWidth: 1.5,
-                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  borderColor: isDark
+                    ? 'rgba(107, 114, 128, 0.3)'
+                    : 'rgba(229, 231, 235, 1)',
                   height: 44,
                 }}
               >
                 <View className="flex-row items-center flex-1">
-                  <View className={`w-6 h-6 rounded-lg items-center justify-center mr-1.5 ${isDark ? "bg-gray-700" : "bg-white"}`}>
-                    <Ionicons name="grid" size={12} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  <View
+                    className={`w-6 h-6 rounded-lg items-center justify-center mr-1.5 ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                  >
+                    <Ionicons
+                      name="grid"
+                      size={12}
+                      color={isDark ? '#9ca3af' : '#6b7280'}
+                    />
                   </View>
-                  <Text className={`text-xs font-semibold flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
+                  <Text
+                    className={`text-xs font-semibold flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    numberOfLines={1}
+                  >
                     {selectedCategory}
                   </Text>
                 </View>
-                <Ionicons 
-                  name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
-                  size={14} 
-                  color={isDark ? "#9ca3af" : "#6b7280"} 
+                <Ionicons
+                  name={showCategoryDropdown ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color={isDark ? '#9ca3af' : '#6b7280'}
                 />
               </TouchableOpacity>
 
               {/* Category Dropdown Menu */}
               {showCategoryDropdown && (
                 <View
-                  className={`absolute top-full right-0 mt-2 rounded-xl overflow-hidden ${isDark ? "bg-gray-800" : "bg-white"}`}
+                  className={`absolute top-full right-0 mt-2 rounded-xl overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-white'}`}
                   style={{
-                    shadowColor: "#000",
+                    shadowColor: '#000',
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.2,
                     shadowRadius: 12,
@@ -394,10 +429,15 @@ export default function MyEvents() {
                     maxHeight: 300,
                     minWidth: 200,
                     borderWidth: 1,
-                    borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                    borderColor: isDark
+                      ? 'rgba(107, 114, 128, 0.3)'
+                      : 'rgba(229, 231, 235, 1)',
                   }}
                 >
-                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={false}
+                  >
                     {categories.map((category, index) => (
                       <TouchableOpacity
                         key={category}
@@ -409,25 +449,32 @@ export default function MyEvents() {
                         className={`px-4 py-3.5 flex-row items-center ${
                           selectedCategory === category
                             ? isDark
-                              ? "bg-blue-900/30"
-                              : "bg-blue-50"
+                              ? 'bg-blue-900/30'
+                              : 'bg-blue-50'
                             : isDark
-                            ? "bg-gray-800"
-                            : "bg-white"
+                              ? 'bg-gray-800'
+                              : 'bg-white'
                         }`}
                         style={{
-                          borderBottomWidth: index < categories.length - 1 ? 1 : 0,
-                          borderBottomColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(229, 231, 235, 1)",
+                          borderBottomWidth:
+                            index < categories.length - 1 ? 1 : 0,
+                          borderBottomColor: isDark
+                            ? 'rgba(107, 114, 128, 0.2)'
+                            : 'rgba(229, 231, 235, 1)',
                         }}
                       >
                         {selectedCategory === category && (
-                          <View className={`w-6 h-6 rounded-full items-center justify-center mr-3 ${isDark ? "bg-blue-600" : "bg-blue-500"}`}>
+                          <View
+                            className={`w-6 h-6 rounded-full items-center justify-center mr-3 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}
+                          >
                             <Ionicons name="checkmark" size={14} color="#fff" />
                           </View>
                         )}
-                        {selectedCategory !== category && <View style={{ width: 38, flexShrink: 0 }} />}
-                        <Text 
-                          className={`text-base flex-1 font-medium ${isDark ? "text-white" : "text-gray-900"}`}
+                        {selectedCategory !== category && (
+                          <View style={{ width: 38, flexShrink: 0 }} />
+                        )}
+                        <Text
+                          className={`text-base flex-1 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
                           numberOfLines={1}
                         >
                           {category}
@@ -450,14 +497,14 @@ export default function MyEvents() {
             {statusFilters.map((status) => {
               const getStatusColor = (): string => {
                 switch (status) {
-                  case "Upcoming":
-                    return "#eab308"; // Yellow
-                  case "Ongoing":
-                    return "#22c55e"; // Green
-                  case "Completed":
-                    return "#6b7280"; // Gray
+                  case 'Upcoming':
+                    return '#eab308'; // Yellow
+                  case 'Ongoing':
+                    return '#22c55e'; // Green
+                  case 'Completed':
+                    return '#6b7280'; // Gray
                   default:
-                    return "#0EA5E9"; // Blue for "All"
+                    return '#0EA5E9'; // Blue for "All"
                 }
               };
 
@@ -468,36 +515,40 @@ export default function MyEvents() {
                 <TouchableOpacity
                   key={status}
                   onPress={() => setSelectedStatus(status)}
-                  className={`px-4 py-2 rounded-full mr-3 ${!isActive
-                    ? isDark
-                      ? "bg-gray-900"
-                      : "bg-white"
-                    : ""
+                  className={`px-4 py-2 rounded-full mr-3 ${
+                    !isActive ? (isDark ? 'bg-gray-900' : 'bg-white') : ''
                   }`}
-                  style={isActive ? {
-                    backgroundColor: activeColor,
-                    shadowColor: activeColor,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 8,
-                    elevation: 6,
-                  } : {
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 4,
-                    elevation: 2,
-                    borderWidth: 1,
-                    borderColor: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.1)",
-                  }}
+                  style={
+                    isActive
+                      ? {
+                          backgroundColor: activeColor,
+                          shadowColor: activeColor,
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.4,
+                          shadowRadius: 8,
+                          elevation: 6,
+                        }
+                      : {
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.05,
+                          shadowRadius: 4,
+                          elevation: 2,
+                          borderWidth: 1,
+                          borderColor: isDark
+                            ? 'rgba(14, 165, 233, 0.1)'
+                            : 'rgba(14, 165, 233, 0.1)',
+                        }
+                  }
                 >
                   <Text
-                    className={`font-bold text-sm ${isActive
-                      ? "text-white"
-                      : isDark
-                        ? "text-gray-400"
-                        : "text-gray-600"
-                      }`}
+                    className={`font-bold text-sm ${
+                      isActive
+                        ? 'text-white'
+                        : isDark
+                          ? 'text-gray-400'
+                          : 'text-gray-600'
+                    }`}
                   >
                     {status}
                   </Text>
@@ -522,42 +573,58 @@ export default function MyEvents() {
         {/* Events List */}
         <View className="px-5">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              {t("tabs.myEvents")}
+            <Text
+              className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+            >
+              {t('tabs.myEvents')}
             </Text>
-            <Text className={`text-sm font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              {filteredEvents.length} {t("common.all")}
+            <Text
+              className={`text-sm font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+            >
+              {filteredEvents.length} {t('common.all')}
             </Text>
           </View>
 
           {filteredEvents.length === 0 ? (
             <View className="items-center justify-center py-20">
-              <View className={`w-24 h-24 rounded-full items-center justify-center mb-4 ${isDark ? "bg-gray-900" : "bg-gray-100"
-                }`}>
-                <Ionicons name="bookmark-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
+              <View
+                className={`w-24 h-24 rounded-full items-center justify-center mb-4 ${
+                  isDark ? 'bg-gray-900' : 'bg-gray-100'
+                }`}
+              >
+                <Ionicons
+                  name="bookmark-outline"
+                  size={40}
+                  color={isDark ? '#4b5563' : '#9ca3af'}
+                />
               </View>
-              <Text className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                {t("events.noEvents")}
+              <Text
+                className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
+              >
+                {t('events.noEvents')}
               </Text>
-              <Text className={`text-center px-10 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-                {searchQuery || selectedCategory !== "All" || selectedStatus !== "All"
-                  ? t("events.searchEvents")
-                  : t("events.createEventFirst")}
+              <Text
+                className={`text-center px-10 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}
+              >
+                {searchQuery ||
+                selectedCategory !== 'All' ||
+                selectedStatus !== 'All'
+                  ? t('events.searchEvents')
+                  : t('events.createEventFirst')}
               </Text>
             </View>
           ) : (
             filteredEvents.map((event) => {
               const ended = isEventEnded(event);
               const timeRemaining = getTimeRemaining(event);
-              const startDateTime = `${formatDateFull(event.startDate)}${!event.fullDayEvent && event.startTime ? `, ${formatTimeTo12Hour(event.startTime)}` : ""}`;
-              const endDateTime = `${formatDateFull(event.endDate)}${!event.fullDayEvent && event.endTime ? `, ${formatTimeTo12Hour(event.endTime)}` : ""}`;
-              
+              // Removed unused startDateTime and endDateTime variables
+
               return (
                 <TouchableOpacity
                   key={event.id}
                   onPress={() => handleEventPress(event)}
                   activeOpacity={0.9}
-                  className={`mb-4 rounded-2xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
+                  className={`mb-4 rounded-2xl overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-white'}`}
                 >
                   {/* Image Placeholder */}
                   <View className="h-40 relative">
@@ -568,8 +635,14 @@ export default function MyEvents() {
                         resizeMode="cover"
                       />
                     ) : (
-                      <View className={`w-full h-full items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
-                        <Ionicons name="image-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
+                      <View
+                        className={`w-full h-full items-center justify-center ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                      >
+                        <Ionicons
+                          name="image-outline"
+                          size={40}
+                          color={isDark ? '#4b5563' : '#9ca3af'}
+                        />
                       </View>
                     )}
                     {/* Time Remaining Badge */}
@@ -577,12 +650,12 @@ export default function MyEvents() {
                       <View
                         className="px-2.5 py-1 rounded-lg"
                         style={{
-                          backgroundColor: isEventOngoing(event) 
-                            ? "rgba(34, 197, 94, 0.9)" 
-                            : ended 
-                            ? "rgba(239, 68, 68, 0.9)" 
-                            : "rgba(0, 0, 0, 0.6)",
-                          backdropFilter: "blur(10px)",
+                          backgroundColor: isEventOngoing(event)
+                            ? 'rgba(34, 197, 94, 0.9)'
+                            : ended
+                              ? 'rgba(239, 68, 68, 0.9)'
+                              : 'rgba(0, 0, 0, 0.6)',
+                          backdropFilter: 'blur(10px)',
                         }}
                       >
                         <Text className="text-xs font-medium text-white">
@@ -595,10 +668,12 @@ export default function MyEvents() {
                       <View
                         className="px-2.5 py-1 rounded-lg"
                         style={{
-                          backgroundColor: "rgba(34, 197, 94, 0.9)",
+                          backgroundColor: 'rgba(34, 197, 94, 0.9)',
                         }}
                       >
-                        <Text className="text-xs font-semibold text-white">{t("events.joined")}</Text>
+                        <Text className="text-xs font-semibold text-white">
+                          {t('events.joined')}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -608,17 +683,21 @@ export default function MyEvents() {
                     <View className="flex-row items-start justify-between mb-2">
                       <Text
                         numberOfLines={2}
-                        className={`text-xl font-bold flex-1 mr-2 ${isDark ? "text-white" : "text-gray-900"}`}
+                        className={`text-xl font-bold flex-1 mr-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
                       >
                         {event.title}
                       </Text>
                       <View
                         className="px-2.5 py-1 rounded-full flex-shrink-0"
                         style={{
-                          backgroundColor: isDark ? "rgba(251, 191, 36, 0.2)" : "rgba(251, 191, 36, 0.15)",
+                          backgroundColor: isDark
+                            ? 'rgba(251, 191, 36, 0.2)'
+                            : 'rgba(251, 191, 36, 0.15)',
                         }}
                       >
-                        <Text className={`text-xs font-semibold ${isDark ? "text-yellow-300" : "text-yellow-600"}`}>
+                        <Text
+                          className={`text-xs font-semibold ${isDark ? 'text-yellow-300' : 'text-yellow-600'}`}
+                        >
                           {event.category}
                         </Text>
                       </View>
@@ -628,7 +707,7 @@ export default function MyEvents() {
                     {event.description && (
                       <Text
                         numberOfLines={1}
-                        className={`text-sm mb-3 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                        className={`text-sm mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
                       >
                         {event.description}
                       </Text>
@@ -636,24 +715,33 @@ export default function MyEvents() {
 
                     {/* Custom Labels */}
                     {(event as any).customLabels && (
-                      <View className="flex-row flex-wrap mb-3" style={{ gap: 6 }}>
-                        {((event as any).customLabels as string).split(",").map((label: string, index: number) => {
-                          const trimmedLabel = label.trim();
-                          if (!trimmedLabel) return null;
-                          return (
-                            <View
-                              key={index}
-                              className="px-2.5 py-1 rounded-full"
-                              style={{
-                                backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
-                              }}
-                            >
-                              <Text className={`text-xs font-semibold ${isDark ? "text-blue-300" : "text-blue-600"}`}>
-                                {trimmedLabel}
-                              </Text>
-                            </View>
-                          );
-                        })}
+                      <View
+                        className="flex-row flex-wrap mb-3"
+                        style={{ gap: 6 }}
+                      >
+                        {((event as any).customLabels as string)
+                          .split(',')
+                          .map((label: string, index: number) => {
+                            const trimmedLabel = label.trim();
+                            if (!trimmedLabel) return null;
+                            return (
+                              <View
+                                key={index}
+                                className="px-2.5 py-1 rounded-full"
+                                style={{
+                                  backgroundColor: isDark
+                                    ? 'rgba(14, 165, 233, 0.2)'
+                                    : 'rgba(14, 165, 233, 0.1)',
+                                }}
+                              >
+                                <Text
+                                  className={`text-xs font-semibold ${isDark ? 'text-blue-300' : 'text-blue-600'}`}
+                                >
+                                  {trimmedLabel}
+                                </Text>
+                              </View>
+                            );
+                          })}
                       </View>
                     )}
 
@@ -661,43 +749,63 @@ export default function MyEvents() {
                     <View className="mb-3">
                       {/* Start Date & Time */}
                       <View className="flex-row items-center mb-2">
-                        <View className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? "bg-emerald-900/30" : "bg-emerald-50"}`}>
-                          <Ionicons name="hourglass-outline" size={12} color="#10b981" />
+                        <View
+                          className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? 'bg-emerald-900/30' : 'bg-emerald-50'}`}
+                        >
+                          <Ionicons
+                            name="hourglass-outline"
+                            size={12}
+                            color="#10b981"
+                          />
                         </View>
                         <View className="flex-1">
-                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{t("createEvent.startDate")}</Text>
-                            <Text
-                              numberOfLines={1}
-                              className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
-                            >
-                              {formatDateFull(event.startDate)}
-                            </Text>
+                          <Text
+                            className={`text-xs font-semibold mb-0.5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}
+                          >
+                            {t('createEvent.startDate')}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                          >
+                            {formatDateFull(event.startDate)}
+                          </Text>
                         </View>
                       </View>
 
                       {/* End Date & Time */}
                       <View className="flex-row items-center">
-                        <View className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? "bg-purple-900/30" : "bg-purple-50"}`}>
+                        <View
+                          className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? 'bg-purple-900/30' : 'bg-purple-50'}`}
+                        >
                           <Ionicons name="flag" size={12} color="#a855f7" />
                         </View>
                         <View className="flex-1">
-                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("createEvent.endDate")}</Text>
-                            <Text
-                              numberOfLines={1}
-                              className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
-                            >
-                              {formatDateFull(event.endDate)}
-                            </Text>
+                          <Text
+                            className={`text-xs font-semibold mb-0.5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}
+                          >
+                            {t('createEvent.endDate')}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                          >
+                            {formatDateFull(event.endDate)}
+                          </Text>
                         </View>
                       </View>
                     </View>
 
                     {/* Location */}
                     <View className="flex-row items-center mb-4">
-                      <Ionicons name="location-outline" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
+                      <Ionicons
+                        name="location-outline"
+                        size={16}
+                        color={isDark ? '#9ca3af' : '#6b7280'}
+                      />
                       <Text
                         numberOfLines={1}
-                        className={`text-sm ml-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                        className={`text-sm ml-2 flex-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
                       >
                         {event.venue}
                       </Text>
@@ -706,9 +814,15 @@ export default function MyEvents() {
                     {/* Attendees and Status Row */}
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center">
-                        <Ionicons name="people-outline" size={16} color="#0EA5E9" />
-                        <Text className={`text-sm ml-2 font-medium text-[#0EA5E9]`}>
-                          {event.participantCount} {t("events.attending")}
+                        <Ionicons
+                          name="people-outline"
+                          size={16}
+                          color="#0EA5E9"
+                        />
+                        <Text
+                          className={`text-sm ml-2 font-medium text-[#0EA5E9]`}
+                        >
+                          {event.participantCount} {t('events.attending')}
                         </Text>
                       </View>
 
@@ -716,10 +830,14 @@ export default function MyEvents() {
                         <View
                           className="px-3 py-1.5 rounded-lg"
                           style={{
-                            backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
+                            backgroundColor: isDark
+                              ? 'rgba(239, 68, 68, 0.2)'
+                              : 'rgba(239, 68, 68, 0.1)',
                           }}
                         >
-                          <Text className="text-xs font-semibold text-red-400">{t("events.eventEnded")}</Text>
+                          <Text className="text-xs font-semibold text-red-400">
+                            {t('events.eventEnded')}
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -733,5 +851,3 @@ export default function MyEvents() {
     </View>
   );
 }
-
-

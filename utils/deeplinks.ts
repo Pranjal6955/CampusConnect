@@ -23,16 +23,22 @@ export function generateEventUniversalLink(eventId: string): string {
 /**
  * Share an event link using the native share sheet
  */
-export async function shareEventLink(eventId: string, eventTitle: string): Promise<void> {
+export async function shareEventLink(
+  eventId: string,
+  eventTitle: string
+): Promise<void> {
   try {
     const deepLink = generateEventDeepLink(eventId);
     const universalLink = generateEventUniversalLink(eventId);
-    
+
     // Create a shareable message
     const message = `Check out this event: ${eventTitle}\n\n${universalLink}`;
-    
+
     const result = await Share.share({
-      message: Platform.OS === 'ios' ? message : `${message}\n\nOpen in CampusConnect app: ${deepLink}`,
+      message:
+        Platform.OS === 'ios'
+          ? message
+          : `${message}\n\nOpen in CampusConnect app: ${deepLink}`,
       title: eventTitle,
       url: Platform.OS === 'ios' ? universalLink : undefined, // iOS uses url, Android uses message
     });
@@ -91,7 +97,7 @@ export async function copyEventLinkToClipboard(eventId: string): Promise<void> {
 export function parseEventDeepLink(url: string): string | null {
   try {
     const parsed = Linking.parse(url);
-    
+
     // Check if it's our app's scheme
     if (parsed.scheme === 'campusconnect') {
       // Format 1: campusconnect://events/{eventId}
@@ -100,12 +106,12 @@ export function parseEventDeepLink(url: string): string | null {
         const eventId = parsed.path.replace(/^\/|\/$/g, ''); // Remove leading/trailing slashes
         if (eventId) return eventId;
       }
-      
+
       // Format 2: campusconnect://events?eventId={eventId}
       if (parsed.hostname === 'events' && parsed.queryParams?.eventId) {
         return parsed.queryParams.eventId as string;
       }
-      
+
       // Format 3: campusconnect://events/{eventId} (alternative parsing)
       if (parsed.path && parsed.path.includes('events')) {
         const pathParts = parsed.path.split('/').filter(Boolean);
@@ -115,11 +121,10 @@ export function parseEventDeepLink(url: string): string | null {
         }
       }
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error parsing deep link:', error);
     return null;
   }
 }
-

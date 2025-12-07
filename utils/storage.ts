@@ -1,25 +1,23 @@
-import * as FileSystem from "expo-file-system";
-import * as ImagePicker from "expo-image-picker";
-import { Platform } from "react-native";
-import { cloudinaryConfig, getCloudinaryUploadUrl } from "../config/cloudinary";
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
+import { cloudinaryConfig, getCloudinaryUploadUrl } from '../config/cloudinary';
 
 /**
  * Request permissions and pick an image from the device
  * @param options - Image picker options (optional)
  * @returns The URI of the selected image, or null if cancelled
  */
-export async function pickImage(
-  options?: {
-    allowsEditing?: boolean;
-    aspect?: [number, number];
-    quality?: number;
-  }
-): Promise<string | null> {
+export async function pickImage(options?: {
+  allowsEditing?: boolean;
+  aspect?: [number, number];
+  quality?: number;
+}): Promise<string | null> {
   try {
     // Request media library permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      throw new Error("Permission to access camera roll is required!");
+    if (status !== 'granted') {
+      throw new Error('Permission to access camera roll is required!');
     }
 
     // Launch image picker
@@ -35,7 +33,7 @@ export async function pickImage(
     }
     return null;
   } catch (error) {
-    console.error("Error picking image:", error);
+    console.error('Error picking image:', error);
     throw error;
   }
 }
@@ -45,18 +43,16 @@ export async function pickImage(
  * @param options - Image picker options (optional)
  * @returns The URI of the captured image, or null if cancelled
  */
-export async function takePhoto(
-  options?: {
-    allowsEditing?: boolean;
-    aspect?: [number, number];
-    quality?: number;
-  }
-): Promise<string | null> {
+export async function takePhoto(options?: {
+  allowsEditing?: boolean;
+  aspect?: [number, number];
+  quality?: number;
+}): Promise<string | null> {
   try {
     // Request camera permissions
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      throw new Error("Permission to access camera is required!");
+    if (status !== 'granted') {
+      throw new Error('Permission to access camera is required!');
     }
 
     // Launch camera
@@ -72,7 +68,7 @@ export async function takePhoto(
     }
     return null;
   } catch (error) {
-    console.error("Error taking photo:", error);
+    console.error('Error taking photo:', error);
     throw error;
   }
 }
@@ -90,29 +86,29 @@ export async function uploadImageToStorage(
   try {
     if (!cloudinaryConfig.cloudName) {
       throw new Error(
-        "Cloudinary cloud name is not configured. " +
-        "Please set EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME in your .env file and restart the Expo development server. " +
-        "After adding environment variables, you must restart Expo (stop and run 'npm start' or 'expo start' again)."
+        'Cloudinary cloud name is not configured. ' +
+          'Please set EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME in your .env file and restart the Expo development server. ' +
+          "After adding environment variables, you must restart Expo (stop and run 'npm start' or 'expo start' again)."
       );
     }
 
     if (!cloudinaryConfig.uploadPreset) {
       throw new Error(
-        "Cloudinary upload preset is not configured. " +
-        "Please set EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your .env file and restart the Expo development server."
+        'Cloudinary upload preset is not configured. ' +
+          'Please set EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your .env file and restart the Expo development server.'
       );
     }
 
     // Remove file extension from path for Cloudinary public_id
-    const publicId = path.replace(/\.[^/.]+$/, "");
+    const publicId = path.replace(/\.[^/.]+$/, '');
 
     // Prepare form data
     const formData = new FormData();
-    
+
     // Determine file type
-    const fileExtension = uri.split(".").pop()?.toLowerCase() || "jpg";
-    const mimeType = fileExtension === "png" ? "image/png" : "image/jpeg";
-    
+    const fileExtension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
+
     // For React Native, FormData expects a specific format
     if (Platform.OS === 'web') {
       // For web, fetch the blob and append it
@@ -128,10 +124,13 @@ export async function uploadImageToStorage(
         }
       } catch (fileError: any) {
         // If file check fails, log but continue - the upload will fail with a clearer error if file doesn't exist
-        console.warn("Could not verify file existence:", fileError?.message || fileError);
+        console.warn(
+          'Could not verify file existence:',
+          fileError?.message || fileError
+        );
         // Don't throw here - let the upload attempt proceed and fail naturally if file is missing
       }
-      
+
       // Use the URI exactly as returned by expo-image-picker
       // On Android, it returns file:// URIs which FormData can handle
       // On iOS, it returns file:// URIs which also work with FormData
@@ -157,17 +156,19 @@ export async function uploadImageToStorage(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Cloudinary upload failed: ${response.status} - ${errorText}`);
+      throw new Error(
+        `Cloudinary upload failed: ${response.status} - ${errorText}`
+      );
     }
 
     const data = await response.json();
-    
+
     // Return secure URL (or regular URL if secure is not available)
     return data.secure_url || data.url;
   } catch (error) {
-    console.error("Error uploading image to Cloudinary:", error);
+    console.error('Error uploading image to Cloudinary:', error);
     if (error instanceof Error) {
-      console.error("Error details:", {
+      console.error('Error details:', {
         message: error.message,
         stack: error.stack,
         uri: uri.substring(0, 50) + '...',
@@ -184,12 +185,16 @@ export async function uploadImageToStorage(
  * Delete an image from Cloudinary
  * @param imageUrl - The Cloudinary URL of the image to delete
  */
-export async function deleteImageFromStorage(
-  imageUrl: string
-): Promise<void> {
+export async function deleteImageFromStorage(imageUrl: string): Promise<void> {
   try {
-    if (!cloudinaryConfig.cloudName || !cloudinaryConfig.apiKey || !cloudinaryConfig.apiSecret) {
-      console.warn("Cloudinary credentials not configured for deletion. Skipping image deletion.");
+    if (
+      !cloudinaryConfig.cloudName ||
+      !cloudinaryConfig.apiKey ||
+      !cloudinaryConfig.apiSecret
+    ) {
+      console.warn(
+        'Cloudinary credentials not configured for deletion. Skipping image deletion.'
+      );
       return;
     }
 
@@ -198,33 +203,33 @@ export async function deleteImageFromStorage(
     // - https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}.{format}
     // - https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{format}
     // - https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{format}
-    
+
     // Find the /upload/ part and get everything after it
     const uploadIndex = imageUrl.indexOf('/upload/');
     if (uploadIndex === -1) {
-      throw new Error("Invalid Cloudinary URL format: missing /upload/");
+      throw new Error('Invalid Cloudinary URL format: missing /upload/');
     }
-    
+
     // Get everything after /upload/ and before query parameters
     const afterUpload = imageUrl.substring(uploadIndex + 8).split('?')[0];
-    
+
     // Remove version prefix (v1234567890/) if present
     const withoutVersion = afterUpload.replace(/^v\d+\//, '');
-    
+
     // Remove transformation parameters (w_500,h_300,c_fill/) if present
     // Transformations are typically at the start and end with /
     // We'll extract the last segment which should be the public_id
     const segments = withoutVersion.split('/');
-    
+
     // The public_id is the last segment (with possible folder path before it)
     // But we need to handle transformations that might be in the middle
     // For simplicity, we'll take everything after the last transformation-like segment
     // or if no transformations, take all segments as the public_id path
-    
+
     // Remove file extension from the last segment
     const lastSegment = segments[segments.length - 1];
     const filenameWithoutExt = lastSegment.replace(/\.[^/.]+$/, '');
-    
+
     // If there are multiple segments, the public_id includes the folder path
     // Join all segments (with last one without extension) to reconstruct public_id
     let publicId: string;
@@ -234,22 +239,24 @@ export async function deleteImageFromStorage(
     } else {
       publicId = filenameWithoutExt;
     }
-    
+
     if (!publicId) {
-      throw new Error("Invalid Cloudinary URL format: could not extract public_id");
+      throw new Error(
+        'Invalid Cloudinary URL format: could not extract public_id'
+      );
     }
-    
+
     // Cloudinary destroy API endpoint
     const destroyUrl = `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/destroy`;
-    
+
     // Create signature for signed request (required for destroy)
     // For now, we'll use unsigned preset approach or skip if credentials are missing
     // Note: For production, you should use a backend API to handle deletions securely
-    
+
     const formData = new FormData();
     formData.append('public_id', publicId);
     formData.append('api_key', cloudinaryConfig.apiKey);
-    
+
     // In production, generate signature on backend
     // For now, we'll log a warning if deletion fails
     try {
@@ -263,11 +270,11 @@ export async function deleteImageFromStorage(
         console.warn(`Failed to delete image from Cloudinary: ${errorText}`);
       }
     } catch (deleteError) {
-      console.warn("Error deleting image from Cloudinary:", deleteError);
+      console.warn('Error deleting image from Cloudinary:', deleteError);
       // Don't throw - image deletion is not critical for app functionality
     }
   } catch (error) {
-    console.error("Error deleting image from Cloudinary:", error);
+    console.error('Error deleting image from Cloudinary:', error);
     // Don't throw - image deletion is not critical
   }
 }
@@ -278,20 +285,26 @@ export async function deleteImageFromStorage(
  */
 export async function deleteImageByPath(publicId: string): Promise<void> {
   try {
-    if (!cloudinaryConfig.cloudName || !cloudinaryConfig.apiKey || !cloudinaryConfig.apiSecret) {
-      console.warn("Cloudinary credentials not configured for deletion. Skipping image deletion.");
+    if (
+      !cloudinaryConfig.cloudName ||
+      !cloudinaryConfig.apiKey ||
+      !cloudinaryConfig.apiSecret
+    ) {
+      console.warn(
+        'Cloudinary credentials not configured for deletion. Skipping image deletion.'
+      );
       return;
     }
 
     // Remove file extension if present
-    const cleanPublicId = publicId.replace(/\.[^/.]+$/, "");
+    const cleanPublicId = publicId.replace(/\.[^/.]+$/, '');
 
     const destroyUrl = `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/destroy`;
-    
+
     const formData = new FormData();
     formData.append('public_id', cleanPublicId);
     formData.append('api_key', cloudinaryConfig.apiKey);
-    
+
     // Note: For production, generate signature on backend for security
     try {
       const response = await fetch(destroyUrl, {
@@ -304,11 +317,11 @@ export async function deleteImageByPath(publicId: string): Promise<void> {
         console.warn(`Failed to delete image from Cloudinary: ${errorText}`);
       }
     } catch (deleteError) {
-      console.warn("Error deleting image from Cloudinary:", deleteError);
+      console.warn('Error deleting image from Cloudinary:', deleteError);
       // Don't throw - image deletion is not critical
     }
   } catch (error) {
-    console.error("Error deleting image by path:", error);
+    console.error('Error deleting image by path:', error);
     // Don't throw - image deletion is not critical
   }
 }
@@ -328,10 +341,9 @@ export async function uploadImageWithPath(
   filename?: string
 ): Promise<string> {
   const timestamp = Date.now();
-  const fileExtension = uri.split(".").pop() || "jpg";
+  const fileExtension = uri.split('.').pop() || 'jpg';
   const finalFilename = filename || `${timestamp}.${fileExtension}`;
   const path = `${folder}/${identifier}/${finalFilename}`;
-  
+
   return uploadImageToStorage(uri, path);
 }
-

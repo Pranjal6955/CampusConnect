@@ -16,16 +16,19 @@ const getInitialLanguage = async (): Promise<string> => {
     if (savedLanguage && ['en', 'hi', 'es'].includes(savedLanguage)) {
       return savedLanguage;
     }
-    
+
     // Get device locale
     const locales = Localization.getLocales();
     if (locales && locales.length > 0) {
-      const deviceLocale = locales[0].languageCode || locales[0].languageTag?.split('-')[0] || 'en';
+      const deviceLocale =
+        locales[0].languageCode ||
+        locales[0].languageTag?.split('-')[0] ||
+        'en';
       if (['en', 'hi', 'es'].includes(deviceLocale)) {
         return deviceLocale;
       }
     }
-    
+
     return 'en'; // Default to English
   } catch (error) {
     console.error('Error getting initial language:', error);
@@ -36,22 +39,20 @@ const getInitialLanguage = async (): Promise<string> => {
 // Initialize i18n
 const initI18n = async () => {
   const initialLanguage = await getInitialLanguage();
-  
-  i18n
-    .use(initReactI18next)
-    .init({
-      compatibilityJSON: 'v4',
-      resources: {
-        en: { translation: en },
-        hi: { translation: hi },
-        es: { translation: es },
-      },
-      lng: initialLanguage,
-      fallbackLng: 'en',
-      interpolation: {
-        escapeValue: false,
-      },
-    });
+
+  i18n.use(initReactI18next).init({
+    compatibilityJSON: 'v4',
+    resources: {
+      en: { translation: en },
+      hi: { translation: hi },
+      es: { translation: es },
+    },
+    lng: initialLanguage,
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false,
+    },
+  });
 };
 
 // Change language and save to storage
@@ -75,4 +76,3 @@ export const getCurrentLanguage = (): string => {
 initI18n();
 
 export default i18n;
-

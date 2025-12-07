@@ -1,78 +1,83 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Link, router, useLocalSearchParams } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { useColorScheme } from "nativewind";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Ionicons } from '@expo/vector-icons';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useColorScheme } from 'nativewind';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native";
-import { auth } from "../../config/firebase";
-import { getRoleBasedRoute, getUserRole, storeUserData, storeUserRole } from "../../utils/auth";
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { auth } from '../../config/firebase';
+import {
+  getRoleBasedRoute,
+  getUserRole,
+  storeUserData,
+  storeUserRole,
+} from '../../utils/auth';
 
 export default function Login() {
   const { t } = useTranslation();
   const { eventId } = useLocalSearchParams<{ eventId?: string }>();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<"signup" | "login">("login");
+  const [activeTab, setActiveTab] = useState<'signup' | 'login'>('login');
   const [loading, setLoading] = useState(false);
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === 'dark';
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert(t("common.error"), t("auth.fillAllFields"));
+      Alert.alert(t('common.error'), t('auth.fillAllFields'));
       return;
     }
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
-      
+
       const role = await getUserRole(user.uid);
 
       // If user is authenticated but not found in Firestore, redirect to signup to complete profile
       if (!role) {
-        Alert.alert(
-          t("auth.profileIncomplete"),
-          t("auth.completeProfile"),
-          [
-            {
-              text: t("common.ok"),
-              onPress: () => router.replace("/signup"),
-            },
-          ]
-        );
+        Alert.alert(t('auth.profileIncomplete'), t('auth.completeProfile'), [
+          {
+            text: t('common.ok'),
+            onPress: () => router.replace('/signup'),
+          },
+        ]);
         return;
       }
 
       // Store user role and data
       await storeUserRole(user.uid, role);
       // Fetch and store user data
-      const { doc, getDoc } = await import("firebase/firestore");
-      const { db } = await import("../../config/firebase");
-      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../../config/firebase');
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         await storeUserData(userDoc.data());
       }
-      
+
       // Navigate based on role and eventId (if present from deep link)
       if (eventId) {
         // If there's an eventId from deep link, navigate to that event
-        if (role === "student") {
+        if (role === 'student') {
           router.replace(`/(student)/events/${eventId}` as any);
-        } else if (role === "organizer") {
+        } else if (role === 'organizer') {
           router.replace(`/(organizer)/events/${eventId}` as any);
         } else {
           const route = getRoleBasedRoute(role);
@@ -82,15 +87,16 @@ export default function Login() {
         // Normal navigation based on role
         const route = getRoleBasedRoute(role);
         // Ensure students are redirected to the student section
-        if (role === "student") {
-          router.replace("/(student)/events" as any);
+        if (role === 'student') {
+          router.replace('/(student)/events' as any);
         } else {
           router.replace(route as any);
         }
       }
     } catch (error: any) {
-      const errorMessage = error?.message || error?.toString() || t("auth.loginFailed");
-      Alert.alert(t("auth.loginFailed"), errorMessage);
+      const errorMessage =
+        error?.message || error?.toString() || t('auth.loginFailed');
+      Alert.alert(t('auth.loginFailed'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -98,8 +104,8 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"}`}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'}`}
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -114,21 +120,21 @@ export default function Login() {
                 width: 120,
                 height: 120,
                 borderRadius: 60,
-                justifyContent: "center",
-                alignItems: "center",
+                justifyContent: 'center',
+                alignItems: 'center',
                 marginBottom: 16,
-                position: "relative",
+                position: 'relative',
               }}
             >
               {/* Neon Circle Outer Glow */}
               <View
                 style={{
-                  position: "absolute",
+                  position: 'absolute',
                   width: 120,
                   height: 120,
                   borderRadius: 60,
-                  backgroundColor: "#0EA5E9",
-                  shadowColor: "#0EA5E9",
+                  backgroundColor: '#0EA5E9',
+                  shadowColor: '#0EA5E9',
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 1,
                   shadowRadius: 25,
@@ -141,12 +147,12 @@ export default function Login() {
                   width: 110,
                   height: 110,
                   borderRadius: 55,
-                  backgroundColor: "#0EA5E9",
-                  justifyContent: "center",
-                  alignItems: "center",
+                  backgroundColor: '#0EA5E9',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   borderWidth: 3,
-                  borderColor: "#00FFFF",
-                  shadowColor: "#00FFFF",
+                  borderColor: '#00FFFF',
+                  shadowColor: '#00FFFF',
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 1,
                   shadowRadius: 20,
@@ -158,11 +164,11 @@ export default function Login() {
                   size={55}
                   color="#fff"
                   style={{
-                    shadowColor: "#fff",
+                    shadowColor: '#fff',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.5,
                     shadowRadius: 8,
-                    textShadowColor: "#00FFFF",
+                    textShadowColor: '#00FFFF',
                     textShadowOffset: { width: 0, height: 0 },
                     textShadowRadius: 10,
                   }}
@@ -171,14 +177,14 @@ export default function Login() {
               {/* Neon Accent Dots */}
               <View
                 style={{
-                  position: "absolute",
+                  position: 'absolute',
                   top: 10,
                   right: 10,
                   width: 12,
                   height: 12,
                   borderRadius: 6,
-                  backgroundColor: "#00FFFF",
-                  shadowColor: "#00FFFF",
+                  backgroundColor: '#00FFFF',
+                  shadowColor: '#00FFFF',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 1,
                   shadowRadius: 10,
@@ -187,14 +193,14 @@ export default function Login() {
               />
               <View
                 style={{
-                  position: "absolute",
+                  position: 'absolute',
                   bottom: 10,
                   left: 10,
                   width: 12,
                   height: 12,
                   borderRadius: 6,
-                  backgroundColor: "#8B5CF6",
-                  shadowColor: "#8B5CF6",
+                  backgroundColor: '#8B5CF6',
+                  shadowColor: '#8B5CF6',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 1,
                   shadowRadius: 10,
@@ -207,17 +213,17 @@ export default function Login() {
               <Text
                 className="text-2xl font-bold"
                 style={{
-                  color: "#0EA5E9",
+                  color: '#0EA5E9',
                   letterSpacing: 1,
                 }}
               >
-                {t("common.appName")}
+                {t('common.appName')}
               </Text>
               <View
                 style={{
                   width: 60,
                   height: 3,
-                  backgroundColor: "#0EA5E9",
+                  backgroundColor: '#0EA5E9',
                   borderRadius: 2,
                   marginTop: 4,
                 }}
@@ -227,56 +233,82 @@ export default function Login() {
 
           {/* Title Section */}
           <View className="items-center mb-6">
-            <Text className="text-3xl font-bold mb-2" style={{ color: isDark ? "#fff" : "#000" }}>
-              {t("common.welcome")}
+            <Text
+              className="text-3xl font-bold mb-2"
+              style={{ color: isDark ? '#fff' : '#000' }}
+            >
+              {t('common.welcome')}
             </Text>
             <Text
-              className={isDark ? "text-gray-400" : "text-gray-600"}
-              style={{ fontSize: 14, textAlign: "center", paddingHorizontal: 20 }}
+              className={isDark ? 'text-gray-400' : 'text-gray-600'}
+              style={{
+                fontSize: 14,
+                textAlign: 'center',
+                paddingHorizontal: 20,
+              }}
             >
-              {t("common.welcomeSubtitle")}
+              {t('common.welcomeSubtitle')}
             </Text>
           </View>
 
           {/* Tab Navigation */}
-          <View className="flex-row mb-6 bg-gray-200 rounded-lg p-1" style={{ backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}>
+          <View
+            className="flex-row mb-6 bg-gray-200 rounded-lg p-1"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.05)',
+            }}
+          >
             <Link href="/signup" asChild>
               <TouchableOpacity
                 style={{
                   flex: 1,
                   paddingVertical: 10,
                   borderRadius: 8,
-                  backgroundColor: activeTab === "signup" ? "#0EA5E9" : "transparent",
+                  backgroundColor:
+                    activeTab === 'signup' ? '#0EA5E9' : 'transparent',
                 }}
               >
                 <Text
                   style={{
-                    textAlign: "center",
-                    fontWeight: "600",
-                    color: activeTab === "signup" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    color:
+                      activeTab === 'signup'
+                        ? '#fff'
+                        : isDark
+                          ? '#9CA3AF'
+                          : '#6B7280',
                   }}
                 >
-                  {t("auth.signup")}
+                  {t('auth.signup')}
                 </Text>
               </TouchableOpacity>
             </Link>
             <TouchableOpacity
-              onPress={() => setActiveTab("login")}
+              onPress={() => setActiveTab('login')}
               style={{
                 flex: 1,
                 paddingVertical: 10,
                 borderRadius: 8,
-                backgroundColor: activeTab === "login" ? "#0EA5E9" : "transparent",
+                backgroundColor:
+                  activeTab === 'login' ? '#0EA5E9' : 'transparent',
               }}
             >
               <Text
                 style={{
-                  textAlign: "center",
-                  fontWeight: "600",
-                  color: activeTab === "login" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
+                  textAlign: 'center',
+                  fontWeight: '600',
+                  color:
+                    activeTab === 'login'
+                      ? '#fff'
+                      : isDark
+                        ? '#9CA3AF'
+                        : '#6B7280',
                 }}
               >
-                {t("auth.login")}
+                {t('auth.login')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -285,22 +317,29 @@ export default function Login() {
           <View>
             {/* Email Input */}
             <View className="mb-4">
-              <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                {t("auth.email")}
+              <Text
+                className="text-sm font-semibold mb-2"
+                style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}
+              >
+                {t('auth.email')}
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)",
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.1)'
+                    : 'rgba(255, 255, 255, 0.9)',
                   borderWidth: 1,
-                  borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)",
+                  borderColor: isDark
+                    ? 'rgba(255, 255, 255, 0.2)'
+                    : 'rgba(0, 0, 0, 0.1)',
                   borderRadius: 12,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                   fontSize: 16,
-                  color: isDark ? "#fff" : "#000",
+                  color: isDark ? '#fff' : '#000',
                 }}
-                placeholder={t("auth.enterEmail")}
-                placeholderTextColor={isDark ? "#666" : "#999"}
+                placeholder={t('auth.enterEmail')}
+                placeholderTextColor={isDark ? '#666' : '#999'}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -311,17 +350,24 @@ export default function Login() {
 
             {/* Password Input */}
             <View className="mb-6">
-              <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                {t("auth.password")}
+              <Text
+                className="text-sm font-semibold mb-2"
+                style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}
+              >
+                {t('auth.password')}
               </Text>
               <View
                 style={{
-                  flexDirection: "row",
-                  backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)",
+                  flexDirection: 'row',
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.1)'
+                    : 'rgba(255, 255, 255, 0.9)',
                   borderWidth: 1,
-                  borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)",
+                  borderColor: isDark
+                    ? 'rgba(255, 255, 255, 0.2)'
+                    : 'rgba(0, 0, 0, 0.1)',
                   borderRadius: 12,
-                  alignItems: "center",
+                  alignItems: 'center',
                 }}
               >
                 <TextInput
@@ -330,10 +376,10 @@ export default function Login() {
                     paddingHorizontal: 16,
                     paddingVertical: 14,
                     fontSize: 16,
-                    color: isDark ? "#fff" : "#000",
+                    color: isDark ? '#fff' : '#000',
                   }}
-                  placeholder={t("auth.enterPassword")}
-                  placeholderTextColor={isDark ? "#666" : "#999"}
+                  placeholder={t('auth.enterPassword')}
+                  placeholderTextColor={isDark ? '#666' : '#999'}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -345,9 +391,9 @@ export default function Login() {
                   style={{ paddingHorizontal: 16 }}
                 >
                   <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color={isDark ? "#9CA3AF" : "#6B7280"}
+                    color={isDark ? '#9CA3AF' : '#6B7280'}
                   />
                 </TouchableOpacity>
               </View>
@@ -358,12 +404,12 @@ export default function Login() {
               onPress={handleLogin}
               disabled={loading}
               style={{
-                backgroundColor: "#0EA5E9",
+                backgroundColor: '#0EA5E9',
                 borderRadius: 12,
                 paddingVertical: 16,
-                alignItems: "center",
+                alignItems: 'center',
                 marginTop: 8,
-                shadowColor: "#0EA5E9",
+                shadowColor: '#0EA5E9',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
                 shadowRadius: 8,
@@ -373,7 +419,11 @@ export default function Login() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18 }}>{t("auth.login")}</Text>
+                <Text
+                  style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}
+                >
+                  {t('auth.login')}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -382,4 +432,3 @@ export default function Login() {
     </KeyboardAvoidingView>
   );
 }
-

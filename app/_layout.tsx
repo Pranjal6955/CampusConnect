@@ -1,16 +1,15 @@
-import { Stack } from "expo-router";
-import * as Notifications from "expo-notifications";
-import * as Linking from "expo-linking";
-import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
-import { router } from "expo-router";
-import "./global.css";
-import { requestNotificationPermissions } from "../utils/notifications";
-import { parseEventDeepLink } from "../utils/deeplinks";
-import { auth } from "../config/firebase";
-import { getUserRole, getRoleBasedRoute } from "../utils/auth";
-import { getNotificationPreference } from "../utils/user";
-import "../config/i18n";
+import { Stack, router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
+import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
+import './global.css';
+import { requestNotificationPermissions } from '../utils/notifications';
+import { parseEventDeepLink } from '../utils/deeplinks';
+import { auth } from '../config/firebase';
+import { getUserRole } from '../utils/auth';
+import { getNotificationPreference } from '../utils/user';
+import '../config/i18n';
 
 // Configure notification behavior - checks user preference dynamically
 Notifications.setNotificationHandler({
@@ -27,11 +26,11 @@ Notifications.setNotificationHandler({
           };
         }
       } catch (error) {
-        console.error("Error checking notification preference:", error);
+        console.error('Error checking notification preference:', error);
         // Default to showing notifications on error
       }
     }
-    
+
     return {
       shouldShowAlert: true,
       shouldPlaySound: true,
@@ -48,9 +47,9 @@ export default function RootLayout() {
   // Handle deep links
   const handleDeepLink = async (url: string) => {
     try {
-      console.log("Deep link received:", url);
+      console.log('Deep link received:', url);
       const eventId = parseEventDeepLink(url);
-      
+
       if (eventId) {
         // Wait a bit for auth state to be ready, then check
         setTimeout(async () => {
@@ -59,10 +58,10 @@ export default function RootLayout() {
             if (user) {
               // Get user role to determine the correct route
               const role = await getUserRole(user.uid);
-              
-              if (role === "student") {
+
+              if (role === 'student') {
                 router.push(`/(student)/events/${eventId}` as any);
-              } else if (role === "organizer") {
+              } else if (role === 'organizer') {
                 router.push(`/(organizer)/events/${eventId}` as any);
               } else {
                 // If role is not determined, try to navigate to student route as fallback
@@ -73,14 +72,14 @@ export default function RootLayout() {
               router.push(`/(auth)/login?eventId=${eventId}` as any);
             }
           } catch (error) {
-            console.error("Error navigating from deep link:", error);
+            console.error('Error navigating from deep link:', error);
             // Fallback: try to navigate to student route
             router.push(`/(student)/events/${eventId}` as any);
           }
         }, 500);
       }
     } catch (error) {
-      console.error("Error handling deep link:", error);
+      console.error('Error handling deep link:', error);
     }
   };
 
@@ -89,28 +88,30 @@ export default function RootLayout() {
     requestNotificationPermissions();
 
     // Set up Android notification channel
-    if (Platform.OS === "android") {
-      Notifications.setNotificationChannelAsync("default", {
-        name: "Default",
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'Default',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#0EA5E9",
+        lightColor: '#0EA5E9',
       });
     }
 
     // Listen for notifications received while app is foregrounded
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log("Notification received:", notification);
-    });
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
+        console.log('Notification received:', notification);
+      });
 
     // Listen for user tapping on notifications
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      console.log("Notification tapped:", data);
-      
-      // Handle navigation based on notification type
-      // You can add navigation logic here if needed
-    });
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+        console.log('Notification tapped:', data);
+
+        // Handle navigation based on notification type
+        // You can add navigation logic here if needed
+      });
 
     // Handle deep links when app is opened via a link
     Linking.getInitialURL().then((url) => {
@@ -121,16 +122,16 @@ export default function RootLayout() {
     });
 
     // Listen for deep links when app is already running
-    linkingListener.current = Linking.addEventListener("url", (event) => {
+    linkingListener.current = Linking.addEventListener('url', (event) => {
       handleDeepLink(event.url);
     });
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
       if (linkingListener.current) {
         linkingListener.current.remove();

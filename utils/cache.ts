@@ -1,14 +1,14 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Cache keys
 const CACHE_KEYS = {
-  EVENTS_ALL: "cache:events:all",
-  EVENTS_ORGANIZER: "cache:events:organizer:",
-  EVENTS_STUDENT: "cache:events:student:",
-  EVENT_DETAIL: "cache:event:",
-  USER_PROFILE: "cache:user:",
-  ATTENDANCE: "cache:attendance:",
-  LAST_SYNC: "cache:last_sync",
+  EVENTS_ALL: 'cache:events:all',
+  EVENTS_ORGANIZER: 'cache:events:organizer:',
+  EVENTS_STUDENT: 'cache:events:student:',
+  EVENT_DETAIL: 'cache:event:',
+  USER_PROFILE: 'cache:user:',
+  ATTENDANCE: 'cache:attendance:',
+  LAST_SYNC: 'cache:last_sync',
 } as const;
 
 // Cache expiration times (in milliseconds)
@@ -30,19 +30,19 @@ interface CachedData<T> {
  */
 function isNetworkError(error: any): boolean {
   if (!error) return false;
-  
-  const errorMessage = error.message?.toLowerCase() || "";
-  const errorCode = error.code?.toLowerCase() || "";
-  
+
+  const errorMessage = error.message?.toLowerCase() || '';
+  const errorCode = error.code?.toLowerCase() || '';
+
   return (
-    errorMessage.includes("network") ||
-    errorMessage.includes("fetch") ||
-    errorMessage.includes("connection") ||
-    errorMessage.includes("timeout") ||
-    errorCode.includes("unavailable") ||
-    errorCode.includes("network") ||
-    errorCode === "auth/network-request-failed" ||
-    errorCode === "unavailable"
+    errorMessage.includes('network') ||
+    errorMessage.includes('fetch') ||
+    errorMessage.includes('connection') ||
+    errorMessage.includes('timeout') ||
+    errorCode.includes('unavailable') ||
+    errorCode.includes('network') ||
+    errorCode === 'auth/network-request-failed' ||
+    errorCode === 'unavailable'
   );
 }
 
@@ -108,10 +108,10 @@ export async function removeCachedData(key: string): Promise<void> {
 export async function clearAllCache(): Promise<void> {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const cacheKeys = keys.filter((key) => key.startsWith("cache:"));
+    const cacheKeys = keys.filter((key) => key.startsWith('cache:'));
     await AsyncStorage.multiRemove(cacheKeys);
   } catch (error) {
-    console.error("Error clearing cache:", error);
+    console.error('Error clearing cache:', error);
   }
 }
 
@@ -132,14 +132,19 @@ export async function setCachedEvents(events: any[]): Promise<void> {
 /**
  * Get cached organizer events
  */
-export async function getCachedOrganizerEvents(organizerId: string): Promise<any[] | null> {
+export async function getCachedOrganizerEvents(
+  organizerId: string
+): Promise<any[] | null> {
   return getCachedData<any[]>(CACHE_KEYS.EVENTS_ORGANIZER + organizerId);
 }
 
 /**
  * Set cached organizer events
  */
-export async function setCachedOrganizerEvents(organizerId: string, events: any[]): Promise<void> {
+export async function setCachedOrganizerEvents(
+  organizerId: string,
+  events: any[]
+): Promise<void> {
   await setCachedData(
     CACHE_KEYS.EVENTS_ORGANIZER + organizerId,
     events,
@@ -150,14 +155,19 @@ export async function setCachedOrganizerEvents(organizerId: string, events: any[
 /**
  * Get cached student events
  */
-export async function getCachedStudentEvents(studentId: string): Promise<any[] | null> {
+export async function getCachedStudentEvents(
+  studentId: string
+): Promise<any[] | null> {
   return getCachedData<any[]>(CACHE_KEYS.EVENTS_STUDENT + studentId);
 }
 
 /**
  * Set cached student events
  */
-export async function setCachedStudentEvents(studentId: string, events: any[]): Promise<void> {
+export async function setCachedStudentEvents(
+  studentId: string,
+  events: any[]
+): Promise<void> {
   await setCachedData(
     CACHE_KEYS.EVENTS_STUDENT + studentId,
     events,
@@ -175,21 +185,33 @@ export async function getCachedEvent(eventId: string): Promise<any | null> {
 /**
  * Set cached event detail
  */
-export async function setCachedEvent(eventId: string, event: any): Promise<void> {
-  await setCachedData(CACHE_KEYS.EVENT_DETAIL + eventId, event, CACHE_EXPIRY.EVENT_DETAIL);
+export async function setCachedEvent(
+  eventId: string,
+  event: any
+): Promise<void> {
+  await setCachedData(
+    CACHE_KEYS.EVENT_DETAIL + eventId,
+    event,
+    CACHE_EXPIRY.EVENT_DETAIL
+  );
 }
 
 /**
  * Get cached user profile
  */
-export async function getCachedUserProfile(userId: string): Promise<any | null> {
+export async function getCachedUserProfile(
+  userId: string
+): Promise<any | null> {
   return getCachedData<any>(CACHE_KEYS.USER_PROFILE + userId);
 }
 
 /**
  * Set cached user profile
  */
-export async function setCachedUserProfile(userId: string, profile: any): Promise<void> {
+export async function setCachedUserProfile(
+  userId: string,
+  profile: any
+): Promise<void> {
   await setCachedData(
     CACHE_KEYS.USER_PROFILE + userId,
     profile,
@@ -200,14 +222,19 @@ export async function setCachedUserProfile(userId: string, profile: any): Promis
 /**
  * Get cached attendance
  */
-export async function getCachedAttendance(eventId: string): Promise<any[] | null> {
+export async function getCachedAttendance(
+  eventId: string
+): Promise<any[] | null> {
   return getCachedData<any[]>(CACHE_KEYS.ATTENDANCE + eventId);
 }
 
 /**
  * Set cached attendance
  */
-export async function setCachedAttendance(eventId: string, attendance: any[]): Promise<void> {
+export async function setCachedAttendance(
+  eventId: string,
+  attendance: any[]
+): Promise<void> {
   await setCachedData(
     CACHE_KEYS.ATTENDANCE + eventId,
     attendance,
@@ -240,7 +267,7 @@ export async function invalidateEventCaches(eventId?: string): Promise<void> {
       await AsyncStorage.multiRemove(eventCacheKeys);
     }
   } catch (error) {
-    console.error("Error invalidating event caches:", error);
+    console.error('Error invalidating event caches:', error);
   }
 }
 
@@ -278,11 +305,10 @@ export async function fetchWithCache<T>(
         return { data: cached, fromCache: true };
       }
       // No cache available, throw error
-      throw new Error("No internet connection and no cached data available");
+      throw new Error('No internet connection and no cached data available');
     } else {
       // Not a network error, rethrow
       throw error;
     }
   }
 }
-
