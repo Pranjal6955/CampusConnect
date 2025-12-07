@@ -65,9 +65,8 @@ export default function Profile() {
         try {
             const user = auth.currentUser;
             if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
+                const data = await getUserProfile(user.uid);
+                if (data) {
                     setUserData(data);
                     
                     // Load notification preference
