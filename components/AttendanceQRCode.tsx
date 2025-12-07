@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import QRCode from "react-native-qrcode-svg";
 import { generateAttendanceQRData } from "../utils/qrcode";
 
@@ -20,6 +21,7 @@ export default function AttendanceQRCode({
   studentId,
   eventTitle,
 }: AttendanceQRCodeProps) {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [qrData] = useState(() => generateAttendanceQRData(eventId, studentId));
@@ -41,10 +43,10 @@ export default function AttendanceQRCode({
           <View className="px-6 pt-12 pb-6 flex-row items-center justify-between">
             <View className="flex-1">
               <Text className={`text-2xl font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                Attendance QR Code
+                {t("scanner.attendanceQRCode")}
               </Text>
               <Text className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                Show this to the organizer
+                {t("scanner.showToOrganizer")}
               </Text>
             </View>
             <TouchableOpacity
@@ -109,7 +111,7 @@ export default function AttendanceQRCode({
             
             {/* QR Code Label */}
             <Text className={`text-xs font-medium mt-4 mb-8 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-              Scan this QR code to mark attendance
+              {t("scanner.scanToMarkAttendance")}
             </Text>
 
             {/* Instructions */}
@@ -127,10 +129,10 @@ export default function AttendanceQRCode({
                   </View>
                   <View className="flex-1">
                     <Text className={`text-sm font-semibold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                      Valid for 24 hours
+                      {t("scanner.validFor24Hours")}
                     </Text>
                     <Text className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                      This QR code expires 24 hours after generation
+                      {t("scanner.expiresAfter24Hours")}
                     </Text>
                   </View>
                 </View>
@@ -151,7 +153,7 @@ export default function AttendanceQRCode({
                     <Ionicons name="information-circle" size={22} color="#0EA5E9" />
                   </View>
                   <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                    How to use
+                    {t("scanner.howToUse")}
                   </Text>
                 </View>
                 
@@ -162,10 +164,10 @@ export default function AttendanceQRCode({
                     </View>
                     <View className="flex-1">
                       <Text className={`text-sm font-medium mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                        Present QR code
+                        {t("scanner.presentQRCode")}
                       </Text>
                       <Text className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                        Show this screen to the event organizer
+                        {t("scanner.showToOrganizer")}
                       </Text>
                     </View>
                   </View>
@@ -176,10 +178,10 @@ export default function AttendanceQRCode({
                     </View>
                     <View className="flex-1">
                       <Text className={`text-sm font-medium mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                        Organizer scans
+                        {t("scanner.organizerScans")}
                       </Text>
                       <Text className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                        The organizer will scan your QR code
+                        {t("scanner.organizerWillScan")}
                       </Text>
                     </View>
                   </View>
@@ -190,10 +192,10 @@ export default function AttendanceQRCode({
                     </View>
                     <View className="flex-1">
                       <Text className={`text-sm font-medium mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-                        Keep screen open
+                        {t("scanner.keepScreenOpen")}
                       </Text>
                       <Text className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                        Wait until attendance is confirmed
+                        {t("scanner.waitForConfirmation")}
                       </Text>
                     </View>
                   </View>

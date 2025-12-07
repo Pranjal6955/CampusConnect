@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { UpdateUserData } from "../utils/user";
 
 interface EditProfileModalProps {
@@ -37,6 +38,7 @@ export default function EditProfileModal({
     loading,
     isStudent = false,
 }: EditProfileModalProps) {
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === "dark";
 
@@ -61,12 +63,12 @@ export default function EditProfileModal({
     const handleSubmit = async () => {
         if (isStudent) {
             if (!firstName || !lastName || !phoneNumber) {
-                Alert.alert("Error", "Please fill in all fields");
+                Alert.alert(t("common.error"), t("common.fillAllFields"));
                 return;
             }
         } else {
             if (!organizationName || !phoneNumber) {
-                Alert.alert("Error", "Please fill in all fields");
+                Alert.alert(t("common.error"), t("common.fillAllFields"));
                 return;
             }
         }
@@ -123,7 +125,7 @@ export default function EditProfileModal({
                         <View className="flex-row items-center mb-6">
                             <View className={`w-1 h-5 rounded-full bg-blue-500 mr-3`} />
                             <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                                Edit Profile
+                                {t("profile.editProfile")}
                             </Text>
                         </View>
 
@@ -134,13 +136,13 @@ export default function EditProfileModal({
                                     <View className="flex-row items-center mb-2">
                                         <Ionicons name="person-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                                         <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                                            First Name
+                                            {t("auth.firstname")}
                                         </Text>
                                     </View>
                                     <TextInput
                                         value={firstName}
                                         onChangeText={setFirstName}
-                                        placeholder="Enter first name"
+                                        placeholder={t("auth.firstname")}
                                         className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                                             }`}
                                         placeholderTextColor={isDark ? "#666" : "#999"}
@@ -161,13 +163,13 @@ export default function EditProfileModal({
                                     <View className="flex-row items-center mb-2">
                                         <Ionicons name="person-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                                         <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                                            Last Name
+                                            {t("auth.lastname")}
                                         </Text>
                                     </View>
                                     <TextInput
                                         value={lastName}
                                         onChangeText={setLastName}
-                                        placeholder="Enter last name"
+                                        placeholder={t("auth.lastname")}
                                         className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                                             }`}
                                         placeholderTextColor={isDark ? "#666" : "#999"}
@@ -194,7 +196,7 @@ export default function EditProfileModal({
                                     <TextInput
                                         value={phoneNumber}
                                         onChangeText={setPhoneNumber}
-                                        placeholder="Enter phone number"
+                                        placeholder={t("auth.phoneNumberPlaceholder")}
                                         keyboardType="phone-pad"
                                         className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                                             }`}
@@ -218,13 +220,13 @@ export default function EditProfileModal({
                                     <View className="flex-row items-center mb-2">
                                         <Ionicons name="business-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                                         <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                                            Organization Name
+                                            {t("profile.organizationName")}
                                         </Text>
                                     </View>
                                     <TextInput
                                         value={organizationName}
                                         onChangeText={setOrganizationName}
-                                        placeholder="Enter organization name"
+                                        placeholder={t("profile.organizationNamePlaceholder")}
                                         className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                                             }`}
                                         placeholderTextColor={isDark ? "#666" : "#999"}
@@ -251,7 +253,7 @@ export default function EditProfileModal({
                                     <TextInput
                                         value={phoneNumber}
                                         onChangeText={setPhoneNumber}
-                                        placeholder="Enter phone number"
+                                        placeholder={t("auth.phoneNumberPlaceholder")}
                                         keyboardType="phone-pad"
                                         className={`px-5 py-4 rounded-2xl ${isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                                             }`}
@@ -287,10 +289,10 @@ export default function EditProfileModal({
                             {loading ? (
                                 <View className="flex-row items-center">
                                     <ActivityIndicator color="#fff" size="small" style={{ marginRight: 10 }} />
-                                    <Text className="text-white font-bold text-lg">Updating...</Text>
+                                    <Text className="text-white font-bold text-lg">{t("profile.updating")}</Text>
                                 </View>
                             ) : (
-                                <Text className="text-white font-bold text-lg">Save Changes</Text>
+                                <Text className="text-white font-bold text-lg">{t("profile.saveChanges")}</Text>
                             )}
                         </TouchableOpacity>
                     </View>

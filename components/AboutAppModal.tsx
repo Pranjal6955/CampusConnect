@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface AboutAppModalProps {
     visible: boolean;
@@ -19,29 +20,30 @@ export default function AboutAppModal({
     visible,
     onClose,
 }: AboutAppModalProps) {
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === "dark";
 
     const features = [
         {
             icon: "calendar-outline",
-            title: "Event Discovery",
-            description: "Browse and discover campus events",
+            title: t("about.discoverEvents"),
+            description: t("about.discoverEventsDesc"),
         },
         {
             icon: "qr-code-outline",
-            title: "QR Code Attendance",
-            description: "Quick and easy event check-in",
+            title: t("about.qrAttendance"),
+            description: t("about.qrAttendanceDesc"),
         },
         {
             icon: "notifications-outline",
-            title: "Smart Notifications",
-            description: "Never miss an important event",
+            title: t("about.notifications"),
+            description: t("about.notificationsDesc"),
         },
         {
             icon: "people-outline",
-            title: "Community",
-            description: "Connect with fellow students",
+            title: t("about.community"),
+            description: t("about.communityDesc"),
         },
     ];
 
@@ -88,10 +90,10 @@ export default function AboutAppModal({
                                 <Ionicons name="school" size={48} color="#0EA5E9" />
                             </View>
                             <Text className={`text-3xl font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                                CampusConnect
+                                {t("common.appName")}
                             </Text>
                             <Text className={`text-base ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                                Version 1.0.0
+                                {t("about.version")} 1.0.0
                             </Text>
                         </View>
 
@@ -100,12 +102,11 @@ export default function AboutAppModal({
                             <View className="flex-row items-center mb-3">
                                 <View className={`w-1 h-5 rounded-full bg-blue-500 mr-3`} />
                                 <Text className={`text-xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                                    About
+                                    {t("about.about")}
                                 </Text>
                             </View>
                             <Text className={`text-base leading-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
-                                CampusConnect is your all-in-one platform for discovering, joining, and managing campus events. 
-                                Stay connected with your campus community and never miss out on exciting opportunities.
+                                {t("about.description")}
                             </Text>
                         </View>
 
@@ -114,7 +115,7 @@ export default function AboutAppModal({
                             <View className="flex-row items-center mb-4">
                                 <View className={`w-1 h-5 rounded-full bg-blue-500 mr-3`} />
                                 <Text className={`text-xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                                    Features
+                                    {t("about.features")}
                                 </Text>
                             </View>
                             <View style={{ gap: 12 }}>
@@ -155,7 +156,7 @@ export default function AboutAppModal({
                             <View className="flex-row items-center mb-4">
                                 <View className={`w-1 h-5 rounded-full bg-blue-500 mr-3`} />
                                 <Text className={`text-xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                                    Developer
+                                    {t("about.developer")}
                                 </Text>
                             </View>
                             <View
@@ -169,8 +170,7 @@ export default function AboutAppModal({
                                 }}
                             >
                                 <Text className={`text-base leading-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
-                                    Built with ❤️ for the campus community. 
-                                    This app helps students stay connected and engaged with campus life.
+                                    {t("about.developerMessage")}
                                 </Text>
                             </View>
                         </View>
@@ -178,7 +178,7 @@ export default function AboutAppModal({
                         {/* Footer */}
                         <View className="items-center pt-4">
                             <Text className={`text-sm ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                                © 2025 CampusConnect. All rights reserved.
+                                © 2025 {t("common.appName")}. {t("about.allRightsReserved")}
                             </Text>
                         </View>
                     </View>

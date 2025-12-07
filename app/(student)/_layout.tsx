@@ -2,8 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 export default function StudentLayout() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -31,7 +33,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="events"
         options={{
-          title: "Events",
+          title: t("tabs.events"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -59,7 +61,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="my-events"
         options={{
-          title: "My Events",
+          title: t("tabs.myEvents"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -87,7 +89,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("tabs.profile"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{

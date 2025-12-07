@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import Badge from "../../../components/Badge";
 import QRCodeScanner from "../../../components/QRCodeScanner";
 import { db } from "../../../config/firebase";
@@ -28,6 +29,7 @@ interface ParticipantData {
 }
 
 export default function OrganizerEventDetails() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -53,7 +55,7 @@ export default function OrganizerEventDetails() {
         await loadParticipants(eventData.participants, id);
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to load event details");
+      Alert.alert(t("common.error"), t("events.title"));
       console.error(error);
     } finally {
       setLoading(false);
@@ -197,11 +199,11 @@ export default function OrganizerEventDetails() {
       if (now < startDate) {
         // Event hasn't started - countdown to start
         targetDate = startDate;
-        label = "Starts in";
+        label = t("events.startsInLabel");
       } else if (now >= startDate && now < endDate) {
         // Event is ongoing - countdown to end
         targetDate = endDate;
-        label = "Ends in";
+        label = t("events.endsInLabel");
       } else {
         // Event has ended
         setCountdown(null);
@@ -233,20 +235,20 @@ export default function OrganizerEventDetails() {
     if (!event) return;
     
     Alert.alert(
-      "Delete Event",
-      `Are you sure you want to delete "${event.title}"?`,
+      t("events.deleteEvent"),
+      t("events.confirmDelete"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await deleteEvent(event.id, event.imageUrl);
-              Alert.alert("Success", "Event deleted successfully");
+              Alert.alert(t("common.success"), t("events.eventDeleted"));
               router.back();
             } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to delete event");
+              Alert.alert(t("common.error"), error.message || t("events.deleteEvent"));
             }
           },
         },
@@ -265,14 +267,14 @@ export default function OrganizerEventDetails() {
   const handleQRScan = async (data: { eventId: string; studentId: string }) => {
     try {
       await markAttendance(data.eventId, data.studentId);
-      Alert.alert("Success", "Attendance marked successfully!");
+      Alert.alert(t("common.success"), t("scanner.scanSuccess"));
       setShowQRScanner(false);
       // Refresh event data and participants with updated attendance
       if (event && event.participants && event.participants.length > 0) {
         await loadParticipants(event.participants, data.eventId);
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to mark attendance");
+      Alert.alert(t("common.error"), error.message || t("scanner.scanError"));
     }
   };
 
@@ -289,17 +291,17 @@ export default function OrganizerEventDetails() {
       <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
         <Ionicons name="alert-circle-outline" size={64} color={isDark ? "#4b5563" : "#9ca3af"} />
         <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-          Event Not Found
+          {t("events.noEvents")}
         </Text>
         <Text className={`text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-          The event you're looking for doesn't exist or has been removed.
+          {t("events.noEventsDesc")}
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           className="mt-6 px-6 py-3 rounded-xl"
           style={{ backgroundColor: "#0EA5E9" }}
         >
-          <Text className="text-white font-bold">Go Back</Text>
+          <Text className="text-white font-bold">{t("common.back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -365,7 +367,7 @@ export default function OrganizerEventDetails() {
                   {countdown.days.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Days
+                  {t("time.day_plural")}
                 </Text>
               </View>
               
@@ -384,7 +386,7 @@ export default function OrganizerEventDetails() {
                   {countdown.hours.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Hours
+                  {t("time.hour_plural")}
                 </Text>
               </View>
               
@@ -403,7 +405,7 @@ export default function OrganizerEventDetails() {
                   {countdown.minutes.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Minutes
+                  {t("time.minute_plural")}
                 </Text>
               </View>
               
@@ -422,7 +424,7 @@ export default function OrganizerEventDetails() {
                   {countdown.seconds.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Seconds
+                  {t("time.minute_plural")}
                 </Text>
               </View>
             </View>
@@ -466,7 +468,7 @@ export default function OrganizerEventDetails() {
               }
               {ended && (
                 <View className="ml-2 px-3 py-1 rounded-lg" style={{ backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)" }}>
-                  <Text className={`text-xs font-semibold ${isDark ? "text-red-400" : "text-red-600"}`}>Event Ended</Text>
+                  <Text className={`text-xs font-semibold ${isDark ? "text-red-400" : "text-red-600"}`}>{t("events.eventEnded")}</Text>
                 </View>
               )}
             </View>
@@ -489,7 +491,7 @@ export default function OrganizerEventDetails() {
                 <Ionicons name="person-add" size={20} color="#0EA5E9" />
               </View>
               <Text className={`text-2xl font-extrabold mb-0.5 ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
-              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Attending</Text>
+              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>{t("events.attending")}</Text>
             </View>
             <View className={`flex-1 p-3 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
               style={{
@@ -506,7 +508,7 @@ export default function OrganizerEventDetails() {
                 <Ionicons name="person-circle-outline" size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
               </View>
               <Text className={`text-2xl font-extrabold mb-0.5 ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
-              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Capacity</Text>
+              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>{t("createEvent.capacity")}</Text>
             </View>
           </View>
 
@@ -524,7 +526,7 @@ export default function OrganizerEventDetails() {
               <View className={`w-10 h-10 rounded-lg items-center justify-center mr-3 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
                 <Ionicons name="document-text-outline" size={22} color="#3b82f6" />
               </View>
-              <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>About Event</Text>
+              <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{t("events.aboutEvent")}</Text>
             </View>
             <Text className={`text-base leading-7 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
               {event.description}
@@ -542,7 +544,7 @@ export default function OrganizerEventDetails() {
             }}
           >
             <View className="p-5">
-              <Text className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Event Details</Text>
+              <Text className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>{t("events.eventDetails")}</Text>
               
               {/* Start Date & Time */}
               <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
@@ -550,7 +552,7 @@ export default function OrganizerEventDetails() {
                   <Ionicons name="hourglass-outline" size={22} color="#10b981" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{t("createEvent.startDate")}</Text>
                   <Text className={`text-base font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDateShort(event.startDate)}
                   </Text>
@@ -571,7 +573,7 @@ export default function OrganizerEventDetails() {
                   <Ionicons name="flag" size={22} color="#a855f7" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("createEvent.endDate")}</Text>
                   <Text className={`text-base font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDateShort(event.endDate)}
                   </Text>
@@ -592,7 +594,7 @@ export default function OrganizerEventDetails() {
                   <Ionicons name="map-outline" size={22} color="#10b981" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Venue</Text>
+                  <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>{t("events.location")}</Text>
                   <Text className={`text-base font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
                     {event.venue}
                   </Text>
@@ -618,7 +620,7 @@ export default function OrganizerEventDetails() {
                     <Ionicons name="people-outline" size={22} color="#6366f1" />
                   </View>
                   <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                    Participants ({participants.length})
+                    {t("events.attendees")} ({participants.length})
                   </Text>
                 </View>
               </View>
@@ -627,7 +629,7 @@ export default function OrganizerEventDetails() {
                 <View className="py-8 items-center justify-center">
                   <ActivityIndicator size="small" color="#0EA5E9" />
                   <Text className={`text-sm mt-2 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                    Loading participants...
+                    {t("common.loading")}
                   </Text>
                 </View>
               ) : participants.length === 0 ? (
@@ -636,10 +638,10 @@ export default function OrganizerEventDetails() {
                     <Ionicons name="people-outline" size={32} color={isDark ? "#4b5563" : "#9ca3af"} />
                   </View>
                   <Text className={`text-base font-medium ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                    No participants yet
+                    {t("events.noEvents")}
                   </Text>
                   <Text className={`text-sm mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                    Participants will appear here once they register
+                    {t("events.createEventFirst")}
                   </Text>
                 </View>
               ) : (
@@ -716,7 +718,7 @@ export default function OrganizerEventDetails() {
               <View className="mr-2.5 w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: "rgba(255, 255, 255, 0.2)" }}>
                 <Ionicons name="qr-code" size={18} color="#fff" />
               </View>
-              <Text className="text-white font-bold text-base">Scan QR Code</Text>
+              <Text className="text-white font-bold text-base">{t("scanner.scanQRCode")}</Text>
             </TouchableOpacity>
 
             {/* Edit, Delete, Share Buttons - In One Row */}
@@ -736,7 +738,7 @@ export default function OrganizerEventDetails() {
                 }}
               >
                 <Ionicons name="pencil-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text className="text-white font-bold text-base">Edit</Text>
+                <Text className="text-white font-bold text-base">{t("common.edit")}</Text>
               </TouchableOpacity>
 
               {/* Delete Button */}
@@ -751,7 +753,7 @@ export default function OrganizerEventDetails() {
                 }}
               >
                 <Ionicons name="trash-outline" size={20} color="#ef4444" style={{ marginRight: 8 }} />
-                <Text className={`font-bold text-base ${isDark ? "text-red-400" : "text-red-600"}`}>Delete</Text>
+                <Text className={`font-bold text-base ${isDark ? "text-red-400" : "text-red-600"}`}>{t("common.delete")}</Text>
               </TouchableOpacity>
 
               {/* Share Button */}
@@ -766,7 +768,7 @@ export default function OrganizerEventDetails() {
                 }}
               >
                 <Ionicons name="share-social-outline" size={20} color="#8b5cf6" style={{ marginRight: 8 }} />
-                <Text className={`font-bold text-base ${isDark ? "text-purple-400" : "text-purple-600"}`}>Share</Text>
+                <Text className={`font-bold text-base ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("common.share")}</Text>
               </TouchableOpacity>
             </View>
           </View>

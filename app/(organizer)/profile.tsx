@@ -16,14 +16,17 @@ import {
 import AboutAppModal from "../../components/AboutAppModal";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import EditProfileModal from "../../components/EditProfileModal";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { auth } from "../../config/firebase";
 import { getUserProfile } from "../../utils/user";
 import { clearAuthStorage } from "../../utils/auth";
 import { cancelAllScheduledNotifications } from "../../utils/notifications";
 import { deleteImageFromStorage, pickImage, takePhoto, uploadImageWithPath } from "../../utils/storage";
 import { getNotificationPreference, updateNotificationPreference, UpdateUserData, updateUserProfile } from "../../utils/user";
+import { useTranslation } from "react-i18next";
 
 export default function Profile() {
+    const { t } = useTranslation();
     const router = useRouter();
     const { colorScheme, setColorScheme } = useColorScheme();
     const isDark = colorScheme === "dark";
@@ -35,6 +38,7 @@ export default function Profile() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
     const [showAboutModal, setShowAboutModal] = useState(false);
+    const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -44,10 +48,10 @@ export default function Profile() {
         setUpdateLoading(true);
         try {
             await updateUserProfile(auth.currentUser.uid, data);
-            Alert.alert("Success", "Profile updated successfully");
+            Alert.alert(t("common.success"), t("profile.profileUpdated"));
             loadUserData(); // Refresh data
         } catch (error) {
-            Alert.alert("Error", "Failed to update profile");
+            Alert.alert(t("common.error"), t("profile.profileUpdated"));
         } finally {
             setUpdateLoading(false);
         }
@@ -186,10 +190,10 @@ export default function Profile() {
     };
 
     const handleLogout = async () => {
-        Alert.alert("Logout", "Are you sure you want to logout?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert(t("profile.logout"), t("profile.confirmLogout"), [
+            { text: t("common.cancel"), style: "cancel" },
             {
-                text: "Logout",
+                text: t("profile.logout"),
                 style: "destructive",
                 onPress: async () => {
                     try {
@@ -198,7 +202,7 @@ export default function Profile() {
                         router.replace("/(auth)/login");
                     } catch (error) {
                         console.error("Error signing out:", error);
-                        Alert.alert("Error", "Failed to sign out");
+                        Alert.alert(t("common.error"), t("profile.logout"));
                     }
                 },
             },
@@ -415,7 +419,7 @@ export default function Profile() {
 
                 <MenuOption
                     icon="person-outline"
-                    title="Edit Profile"
+                    title={t("profile.editProfile")}
                     subtitle="Update your organization details"
                     onPress={() => {
                         setShowEditModal(true);
@@ -424,8 +428,8 @@ export default function Profile() {
 
                 <MenuOption
                     icon="notifications-outline"
-                    title="Notifications"
-                    subtitle="Manage your alerts"
+                    title={t("profile.notifications")}
+                    subtitle={t("profile.enableNotifications")}
                     showArrow={false}
                     rightElement={
                         <Switch
@@ -441,13 +445,13 @@ export default function Profile() {
                                     // If disabling, cancel all scheduled notifications
                                     if (!enabled) {
                                         await cancelAllScheduledNotifications();
-                                        Alert.alert("Notifications Disabled", "All scheduled notifications have been cancelled.");
+                                        Alert.alert(t("profile.notifications"), t("profile.notifications"));
                                     } else {
-                                        Alert.alert("Notifications Enabled", "You will now receive event notifications.");
+                                        Alert.alert(t("profile.notifications"), t("profile.notifications"));
                                     }
                                 } catch (error) {
                                     console.error("Error updating notification preference:", error);
-                                    Alert.alert("Error", "Failed to update notification settings");
+                                    Alert.alert(t("common.error"), t("profile.notifications"));
                                     // Revert the toggle on error
                                     setNotificationsEnabled(!enabled);
                                 }
@@ -456,6 +460,13 @@ export default function Profile() {
                             thumbColor={notificationsEnabled ? "#fff" : "#f4f3f4"}
                         />
                     }
+                />
+
+                <MenuOption
+                    icon="language-outline"
+                    title={t("profile.language")}
+                    subtitle={t("profile.selectLanguage")}
+                    onPress={() => setShowLanguageSwitcher(true)}
                 />
 
                 <MenuOption
@@ -474,21 +485,21 @@ export default function Profile() {
 
                 <MenuOption
                     icon="document-text-outline"
-                    title="Privacy Policy"
+                    title={t("profile.privacyPolicy")}
                     subtitle="How we handle your data"
                     onPress={() => router.push("/(organizer)/privacy-policy")}
                 />
 
                 <MenuOption
                     icon="information-circle-outline"
-                    title="About App"
+                    title={t("profile.aboutApp")}
                     onPress={() => setShowAboutModal(true)}
                 />
 
                 <View className="mt-6">
                     <MenuOption
                         icon="log-out-outline"
-                        title="Logout"
+                        title={t("profile.logout")}
                         color="#ef4444"
                         onPress={handleLogout}
                         showArrow={false}
@@ -522,6 +533,10 @@ export default function Profile() {
             <AboutAppModal
                 visible={showAboutModal}
                 onClose={() => setShowAboutModal(false)}
+            />
+            <LanguageSwitcher
+                visible={showLanguageSwitcher}
+                onClose={() => setShowLanguageSwitcher(false)}
             />
         </View>
     );

@@ -3,6 +3,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { Alert, Modal, Platform, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { isValidQRCode, parseAttendanceQRData } from "../utils/qrcode";
 
 interface QRCodeScannerProps {
@@ -18,6 +19,7 @@ export default function QRCodeScanner({
   onScan,
   eventId,
 }: QRCodeScannerProps) {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [scanned, setScanned] = useState(false);
@@ -40,7 +42,7 @@ export default function QRCodeScanner({
 
     // Validate QR code
     if (!isValidQRCode(data)) {
-      Alert.alert("Invalid QR Code", "This QR code is expired or invalid. Please ask the student to generate a new one.");
+      Alert.alert(t("scanner.invalidQR"), t("scanner.invalidQRMessage"));
       setTimeout(() => setScanned(false), 2000);
       return;
     }
@@ -48,7 +50,7 @@ export default function QRCodeScanner({
     // Parse QR code data
     const parsed = parseAttendanceQRData(data);
     if (!parsed) {
-      Alert.alert("Invalid QR Code", "Could not parse QR code data.");
+      Alert.alert(t("scanner.invalidQR"), t("scanner.couldNotParse"));
       setTimeout(() => setScanned(false), 2000);
       return;
     }
@@ -56,8 +58,8 @@ export default function QRCodeScanner({
     // Check if QR code is for the correct event (if eventId is provided)
     if (eventId && parsed.eventId !== eventId) {
       Alert.alert(
-        "Wrong Event",
-        "This QR code is for a different event. Please scan the correct QR code."
+        t("scanner.wrongEvent"),
+        t("scanner.wrongEventMessage")
       );
       setTimeout(() => setScanned(false), 2000);
       return;
@@ -79,7 +81,7 @@ export default function QRCodeScanner({
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
           <Text className={`text-lg ${isDark ? "text-white" : "text-gray-900"}`}>
-            Requesting camera permission...
+            {t("scanner.requestingPermission")}
           </Text>
         </View>
       </Modal>
@@ -92,23 +94,23 @@ export default function QRCodeScanner({
         <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
           <Ionicons name="camera-outline" size={64} color={isDark ? "#666" : "#999"} />
           <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-            Camera Permission Required
+            {t("permissions.camera")}
           </Text>
           <Text className={`text-center mb-6 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-            Please grant camera permission to scan QR codes
+            {t("permissions.cameraDesc")}
           </Text>
           <TouchableOpacity
             onPress={requestPermission}
             className="bg-blue-500 px-6 py-3 rounded-lg"
           >
-            <Text className="text-white font-semibold">Grant Permission</Text>
+            <Text className="text-white font-semibold">{t("permissions.grant")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onClose}
             className="mt-4 px-6 py-3 rounded-lg"
             style={{ backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)" }}
           >
-            <Text className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Close</Text>
+            <Text className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{t("common.close")}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -121,16 +123,16 @@ export default function QRCodeScanner({
         <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
           <Ionicons name="alert-circle-outline" size={64} color={isDark ? "#666" : "#999"} />
           <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-            QR Scanner Not Available
+            {t("scanner.notAvailable")}
           </Text>
           <Text className={`text-center mb-6 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-            QR code scanning is not available on web. Please use the mobile app.
+            {t("scanner.notAvailableMessage")}
           </Text>
           <TouchableOpacity
             onPress={onClose}
             className="bg-blue-500 px-6 py-3 rounded-lg"
           >
-            <Text className="text-white font-semibold">Close</Text>
+            <Text className="text-white font-semibold">{t("common.close")}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -236,10 +238,10 @@ export default function QRCodeScanner({
         {/* Instructions */}
         <View className="absolute bottom-0 left-0 right-0 p-6 bg-black/80">
           <Text className="text-white text-center text-lg font-semibold mb-2">
-            Scan QR Code
+            {t("scanner.scanQRCode")}
           </Text>
           <Text className="text-gray-300 text-center text-sm mb-4">
-            Position the QR code within the frame
+            {t("scanner.positionQRCode")}
           </Text>
         </View>
 

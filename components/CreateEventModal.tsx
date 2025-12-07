@@ -16,6 +16,7 @@ import {
   View,
   useColorScheme,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Event, EventCategory, EventFormData, EventType, pickImage } from "../utils/events";
 
 interface CreateEventModalProps {
@@ -33,6 +34,7 @@ export default function CreateEventModal({
   editingEvent,
   formLoading,
 }: CreateEventModalProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -127,18 +129,18 @@ export default function CreateEventModal({
 
   const handleSubmit = async () => {
     if (!title || !description || !venue || !participantLimit) {
-      Alert.alert("Error", "Please fill in all required fields");
+      Alert.alert(t("common.error"), t("createEvent.fillAllFields"));
       return;
     }
 
     const limit = parseInt(participantLimit);
     if (isNaN(limit) || limit < 1) {
-      Alert.alert("Error", "Participant limit must be at least 1");
+      Alert.alert(t("common.error"), t("createEvent.participantLimitMin"));
       return;
     }
 
     if (startDate > endDate) {
-      Alert.alert("Error", "End date must be after start date");
+      Alert.alert(t("common.error"), t("createEvent.endDateAfterStart"));
       return;
     }
 
@@ -217,12 +219,12 @@ export default function CreateEventModal({
               <View className="flex-row items-center">
               <Ionicons name="image-outline" size={20} color="#0EA5E9" style={{ marginRight: 8 }} />
               <Text className={`text-base font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                  Event Images
+                  {t("createEvent.eventImages")}
                 </Text>
               </View>
               {imageUris.length > 0 && (
                 <Text className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  {imageUris.length} {imageUris.length === 1 ? "image" : "images"}
+                  {imageUris.length} {imageUris.length === 1 ? t("createEvent.image") : t("createEvent.images")}
               </Text>
               )}
             </View>
@@ -255,7 +257,7 @@ export default function CreateEventModal({
                         </TouchableOpacity>
                         {index === 0 && (
                           <View className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60">
-                            <Text className="text-xs font-semibold text-white">Primary</Text>
+                            <Text className="text-xs font-semibold text-white">{t("createEvent.primary")}</Text>
                           </View>
                         )}
                       </View>
@@ -288,17 +290,17 @@ export default function CreateEventModal({
                     <Ionicons name="add" size={32} color="#0EA5E9" />
                   </View>
                   <Text className={`text-base font-bold mb-1 text-center ${isDark ? "text-white" : "text-gray-900"}`}>
-                    Add Event Images
+                    {t("createEvent.addEventImages")}
                   </Text>
                   <Text className={`text-xs text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                    Tap to upload • Recommended: 16:9 ratio
+                    {t("createEvent.tapToUpload")}
                   </Text>
                 </View>
               ) : (
                 <View className="items-center justify-center">
                   <Ionicons name="add" size={28} color="#0EA5E9" />
                   <Text className={`text-sm font-semibold mt-2 text-center ${isDark ? "text-white" : "text-gray-900"}`}>
-                    Add More Image
+                    {t("createEvent.addMoreImage")}
                   </Text>
                 </View>
               )}
@@ -310,7 +312,7 @@ export default function CreateEventModal({
             <View className="flex-row items-center mb-4">
               <View className={`w-1 h-5 rounded-full ${isDark ? "bg-blue-500" : "bg-blue-500"} mr-3`} />
               <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                Basic Information
+                {t("createEvent.basicInformation")}
               </Text>
             </View>
 
@@ -320,7 +322,7 @@ export default function CreateEventModal({
                 <Ionicons name="text-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                 <View className="flex-row items-center">
                   <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                    Event Title
+                    {t("createEvent.eventTitle")}
                   </Text>
                   <Text className="text-sm font-bold text-red-500"> *</Text>
                 </View>
@@ -328,7 +330,7 @@ export default function CreateEventModal({
               <TextInput
                 value={title}
                 onChangeText={setTitle}
-                placeholder="e.g., Tech Conference 2024"
+                placeholder={t("createEvent.eventTitlePlaceholder")}
                 className={`px-5 py-4 rounded-2xl ${
                   isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                 }`}
@@ -351,7 +353,7 @@ export default function CreateEventModal({
                 <Ionicons name="document-text-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                 <View className="flex-row items-center">
                   <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                    Description
+                    {t("createEvent.description")}
                   </Text>
                   <Text className="text-sm font-bold text-red-500"> *</Text>
                 </View>
@@ -359,7 +361,7 @@ export default function CreateEventModal({
               <TextInput
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Describe your event in detail. What will attendees learn or experience?"
+                placeholder={t("createEvent.descriptionPlaceholder")}
                 multiline
                 numberOfLines={5}
                 className={`px-5 py-4 rounded-2xl ${
@@ -386,7 +388,7 @@ export default function CreateEventModal({
             <View className="flex-row items-center mb-4">
               <View className={`w-1 h-5 rounded-full ${isDark ? "bg-blue-500" : "bg-blue-500"} mr-3`} />
               <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                Date & Time
+                {t("createEvent.dateTime")}
               </Text>
             </View>
 
@@ -395,7 +397,7 @@ export default function CreateEventModal({
                 <View className="flex-row items-center mb-2">
                 <Ionicons name="hourglass-outline" size={14} color="#0EA5E9" style={{ marginRight: 4 }} />
                   <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Start
+                  {t("createEvent.startDate")}
                   </Text>
                 </View>
               <View className="flex-row" style={{ gap: 12 }}>
@@ -473,7 +475,7 @@ export default function CreateEventModal({
                 <View className="flex-row items-center mb-2">
                 <Ionicons name="flag" size={14} color="#0EA5E9" style={{ marginRight: 4 }} />
                   <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  End
+                  {t("createEvent.endDate")}
                   </Text>
                 </View>
               <View className="flex-row" style={{ gap: 12 }}>
@@ -574,7 +576,7 @@ export default function CreateEventModal({
             <View className="flex-row items-center mb-4">
               <View className={`w-1 h-5 rounded-full ${isDark ? "bg-blue-500" : "bg-blue-500"} mr-3`} />
               <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                Event Details
+                {t("createEvent.eventDetails")}
               </Text>
             </View>
 
@@ -584,7 +586,7 @@ export default function CreateEventModal({
                 <Ionicons name="location-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                 <View className="flex-row items-center">
                   <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                    Venue / Location
+                    {t("createEvent.location")}
                   </Text>
                   <Text className="text-sm font-bold text-red-500"> *</Text>
                 </View>
@@ -592,7 +594,7 @@ export default function CreateEventModal({
               <TextInput
                 value={venue}
                 onChangeText={setVenue}
-                placeholder="e.g., Convention Center, Room 101"
+                placeholder={t("createEvent.locationPlaceholder")}
                 className={`px-5 py-4 rounded-2xl ${
                   isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                 }`}
@@ -615,7 +617,7 @@ export default function CreateEventModal({
                 <Ionicons name="pricetag-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                 <View className="flex-row items-center">
                   <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                    Category
+                    {t("createEvent.category")}
                   </Text>
                   <Text className="text-sm font-bold text-red-500"> *</Text>
                 </View>
@@ -663,7 +665,7 @@ export default function CreateEventModal({
               <View className="flex-row items-center mb-2">
                 <Ionicons name="pricetag-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                   <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                  Custom Labels
+                  {t("createEvent.customLabels")}
                 </Text>
               </View>
               
@@ -696,7 +698,7 @@ export default function CreateEventModal({
                 <TextInput
                   value={labelInput}
                   onChangeText={setLabelInput}
-                  placeholder="Add a label..."
+                  placeholder={t("createEvent.addLabel")}
                   className={`flex-1 px-5 py-4 rounded-2xl ${
                     isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
                   }`}
@@ -741,7 +743,7 @@ export default function CreateEventModal({
                 </TouchableOpacity>
               </View>
               <Text className={`text-xs mt-2 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-                Press Enter or tap the + icon to add labels
+                {t("createEvent.addLabelHint")}
               </Text>
             </View>
 
@@ -751,7 +753,7 @@ export default function CreateEventModal({
                 <Ionicons name="people-outline" size={16} color="#0EA5E9" style={{ marginRight: 6 }} />
                 <View className="flex-row items-center">
                   <Text className={`text-sm font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                    Participant Limit
+                    {t("createEvent.participantLimit")}
                   </Text>
                   <Text className="text-sm font-bold text-red-500"> *</Text>
                 </View>
@@ -759,7 +761,7 @@ export default function CreateEventModal({
               <TextInput
                 value={participantLimit}
                 onChangeText={setParticipantLimit}
-                placeholder="e.g., 100"
+                placeholder={t("createEvent.participantLimitPlaceholder")}
                 keyboardType="numeric"
                 className={`px-5 py-4 rounded-2xl ${
                   isDark ? "bg-gray-800 text-white" : "bg-white text-gray-900"
@@ -797,7 +799,7 @@ export default function CreateEventModal({
                 <View className="flex-row items-center">
                   <ActivityIndicator color="#fff" size="small" style={{ marginRight: 10 }} />
                   <Text className="text-white font-bold text-lg">
-                    {editingEvent ? "Updating..." : "Creating..."}
+                    {editingEvent ? t("createEvent.updating") : t("createEvent.creating")}
                   </Text>
                 </View>
               ) : (
@@ -810,7 +812,7 @@ export default function CreateEventModal({
                     />
                   </View>
                   <Text className="text-white font-bold text-lg">
-                    {editingEvent ? "Update Event" : "Create Event"}
+                    {editingEvent ? t("createEvent.update") : t("createEvent.create")}
                   </Text>
                 </View>
               )}

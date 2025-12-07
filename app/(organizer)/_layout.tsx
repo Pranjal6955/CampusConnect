@@ -2,8 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 export default function OrganizerLayout() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -31,7 +33,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="events"
         options={{
-          title: "Events",
+          title: t("tabs.events"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -59,7 +61,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="scanner"
         options={{
-          title: "Check-In Hub",
+          title: t("tabs.checkInHub"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -131,7 +133,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="feedback"
         options={{
-          title: "Feedback",
+          title: t("tabs.feedback"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -165,7 +167,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("tabs.profile"),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{

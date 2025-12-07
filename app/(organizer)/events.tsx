@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +31,7 @@ import {
 import { getUserProfile } from "../../utils/user";
 
 export default function Events() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { editEventId } = useLocalSearchParams<{ editEventId?: string }>();
@@ -332,7 +334,7 @@ export default function Events() {
         console.error("Error checking low attendance:", err)
       );
     } catch (error) {
-      Alert.alert("Error", "Failed to load events");
+      Alert.alert(t("common.error"), t("events.title"));
       console.error(error);
     } finally {
       setLoading(false);
@@ -395,22 +397,22 @@ export default function Events() {
 
   const handleDelete = (event: Event) => {
     Alert.alert(
-      "Delete Event",
-      `Are you sure you want to delete "${event.title}"?`,
+      t("events.deleteEvent"),
+      t("events.confirmDelete"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await deleteEvent(event.id, event.imageUrl);
-              Alert.alert("Success", "Event deleted successfully");
+              Alert.alert(t("common.success"), t("events.eventDeleted"));
               loadEvents();
               setShowViewModal(false);
               setViewingEvent(null);
             } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to delete event");
+              Alert.alert(t("common.error"), error.message || t("events.deleteEvent"));
             }
           },
         },
@@ -432,7 +434,7 @@ export default function Events() {
   const handleQRScan = async (data: { eventId: string; studentId: string }) => {
     try {
       await markAttendance(data.eventId, data.studentId);
-      Alert.alert("Success", "Attendance marked successfully!");
+      Alert.alert(t("common.success"), t("scanner.scanSuccess"));
       setShowQRScanner(false);
       setScanningEventId(null);
     } catch (error: any) {
@@ -495,7 +497,7 @@ export default function Events() {
                   <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
                 </View>
                 <TextInput
-                  placeholder="Search events..."
+                  placeholder={t("events.searchEvents")}
                   placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -684,10 +686,10 @@ export default function Events() {
         <View className="px-5">
           <View className="flex-row items-center justify-between mb-4">
             <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              Upcoming Events
+              {t("events.upcoming")}
             </Text>
             <Text className={`text-sm font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              {filteredEvents.length} found
+              {filteredEvents.length} {t("common.all")}
             </Text>
           </View>
 
@@ -698,12 +700,12 @@ export default function Events() {
                 <Ionicons name="calendar-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
               </View>
               <Text className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                No events found
+                {t("events.noEvents")}
               </Text>
               <Text className={`text-center px-10 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
                 {searchQuery || selectedCategory !== "All" || selectedStatus !== "All"
-                  ? "Try adjusting your search or filters"
-                  : "Create your first event to get started!"}
+                  ? t("events.searchEvents")
+                  : t("events.createEventFirst")}
               </Text>
             </View>
           ) : (

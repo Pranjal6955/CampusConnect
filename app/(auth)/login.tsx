@@ -3,21 +3,23 @@ import { Link, router, useLocalSearchParams } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { auth } from "../../config/firebase";
 import { getRoleBasedRoute, getUserRole, storeUserData, storeUserRole } from "../../utils/auth";
 
 export default function Login() {
+  const { t } = useTranslation();
   const { eventId } = useLocalSearchParams<{ eventId?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +31,7 @@ export default function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert(t("common.error"), t("auth.fillAllFields"));
       return;
     }
 
@@ -43,11 +45,11 @@ export default function Login() {
       // If user is authenticated but not found in Firestore, redirect to signup to complete profile
       if (!role) {
         Alert.alert(
-          "Profile Incomplete",
-          "Please complete your profile to continue.",
+          t("auth.profileIncomplete"),
+          t("auth.completeProfile"),
           [
             {
-              text: "OK",
+              text: t("common.ok"),
               onPress: () => router.replace("/signup"),
             },
           ]
@@ -87,8 +89,8 @@ export default function Login() {
         }
       }
     } catch (error: any) {
-      const errorMessage = error?.message || error?.toString() || "An error occurred during login";
-      Alert.alert("Login Failed", errorMessage);
+      const errorMessage = error?.message || error?.toString() || t("auth.loginFailed");
+      Alert.alert(t("auth.loginFailed"), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -209,7 +211,7 @@ export default function Login() {
                   letterSpacing: 1,
                 }}
               >
-                Campus Connect
+                {t("common.appName")}
               </Text>
               <View
                 style={{
@@ -226,13 +228,13 @@ export default function Login() {
           {/* Title Section */}
           <View className="items-center mb-6">
             <Text className="text-3xl font-bold mb-2" style={{ color: isDark ? "#fff" : "#000" }}>
-              Welcome to Campus Connect
+              {t("common.welcome")}
             </Text>
             <Text
               className={isDark ? "text-gray-400" : "text-gray-600"}
               style={{ fontSize: 14, textAlign: "center", paddingHorizontal: 20 }}
             >
-              Create an account or log in to explore about our app
+              {t("common.welcomeSubtitle")}
             </Text>
           </View>
 
@@ -254,7 +256,7 @@ export default function Login() {
                     color: activeTab === "signup" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
                   }}
                 >
-                  Sign Up
+                  {t("auth.signup")}
                 </Text>
               </TouchableOpacity>
             </Link>
@@ -274,7 +276,7 @@ export default function Login() {
                   color: activeTab === "login" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
                 }}
               >
-                Log In
+                {t("auth.login")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -284,7 +286,7 @@ export default function Login() {
             {/* Email Input */}
             <View className="mb-4">
               <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                Email
+                {t("auth.email")}
               </Text>
               <TextInput
                 style={{
@@ -297,7 +299,7 @@ export default function Login() {
                   fontSize: 16,
                   color: isDark ? "#fff" : "#000",
                 }}
-                placeholder="Enter your email"
+                placeholder={t("auth.enterEmail")}
                 placeholderTextColor={isDark ? "#666" : "#999"}
                 value={email}
                 onChangeText={setEmail}
@@ -310,7 +312,7 @@ export default function Login() {
             {/* Password Input */}
             <View className="mb-6">
               <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                Password
+                {t("auth.password")}
               </Text>
               <View
                 style={{
@@ -330,7 +332,7 @@ export default function Login() {
                     fontSize: 16,
                     color: isDark ? "#fff" : "#000",
                   }}
-                  placeholder="Enter your password"
+                  placeholder={t("auth.enterPassword")}
                   placeholderTextColor={isDark ? "#666" : "#999"}
                   value={password}
                   onChangeText={setPassword}
@@ -371,7 +373,7 @@ export default function Login() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18 }}>Login</Text>
+                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18 }}>{t("auth.login")}</Text>
               )}
             </TouchableOpacity>
           </View>

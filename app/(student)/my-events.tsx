@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { auth } from "../../config/firebase";
 import {
   checkUpcomingEvents,
@@ -22,6 +23,7 @@ import {
 import { getUserProfile } from "../../utils/user";
 
 export default function MyEvents() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [events, setEvents] = useState<Event[]>([]);
@@ -176,9 +178,9 @@ export default function MyEvents() {
     // If event has already started or ended
     if (diffMs <= 0) {
       if (isEventOngoing(event)) {
-        return "Ongoing";
+        return t("events.ongoing");
       }
-      return "Ended";
+      return t("events.completed");
     }
     
     const diffMins = Math.floor(diffMs / 60000);
@@ -201,7 +203,7 @@ export default function MyEvents() {
       parts.push(`${remainingMins} ${remainingMins === 1 ? "min" : "min"}`);
     }
     
-    return parts.join(", ") + " left";
+    return parts.join(", ") + " " + t("time.left");
   };
 
   useEffect(() => {
@@ -311,7 +313,7 @@ export default function MyEvents() {
         <View className="px-5 pt-16 pb-6">
           <View className="mb-6">
             <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              My Events
+              {t("tabs.myEvents")}
             </Text>
           </View>
 
@@ -332,7 +334,7 @@ export default function MyEvents() {
                   <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
                 </View>
                 <TextInput
-                  placeholder="Search events..."
+                  placeholder={t("events.searchEvents")}
                   placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -521,10 +523,10 @@ export default function MyEvents() {
         <View className="px-5">
           <View className="flex-row items-center justify-between mb-4">
             <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              Registered Events
+              {t("tabs.myEvents")}
             </Text>
             <Text className={`text-sm font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              {filteredEvents.length} found
+              {filteredEvents.length} {t("common.all")}
             </Text>
           </View>
 
@@ -535,12 +537,12 @@ export default function MyEvents() {
                 <Ionicons name="bookmark-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
               </View>
               <Text className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                No registered events
+                {t("events.noEvents")}
               </Text>
               <Text className={`text-center px-10 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
                 {searchQuery || selectedCategory !== "All" || selectedStatus !== "All"
-                  ? "Try adjusting your search or filters"
-                  : "You haven't registered for any events yet. Browse events to get started!"}
+                  ? t("events.searchEvents")
+                  : t("events.createEventFirst")}
               </Text>
             </View>
           ) : (
@@ -596,7 +598,7 @@ export default function MyEvents() {
                           backgroundColor: "rgba(34, 197, 94, 0.9)",
                         }}
                       >
-                        <Text className="text-xs font-semibold text-white">Registered</Text>
+                        <Text className="text-xs font-semibold text-white">{t("events.joined")}</Text>
                       </View>
                     </View>
                   </View>
@@ -663,7 +665,7 @@ export default function MyEvents() {
                           <Ionicons name="hourglass-outline" size={12} color="#10b981" />
                         </View>
                         <View className="flex-1">
-                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{t("createEvent.startDate")}</Text>
                             <Text
                               numberOfLines={1}
                               className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
@@ -679,7 +681,7 @@ export default function MyEvents() {
                           <Ionicons name="flag" size={12} color="#a855f7" />
                         </View>
                         <View className="flex-1">
-                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("createEvent.endDate")}</Text>
                             <Text
                               numberOfLines={1}
                               className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
@@ -706,7 +708,7 @@ export default function MyEvents() {
                       <View className="flex-row items-center">
                         <Ionicons name="people-outline" size={16} color="#0EA5E9" />
                         <Text className={`text-sm ml-2 font-medium text-[#0EA5E9]`}>
-                          {event.participantCount} attending
+                          {event.participantCount} {t("events.attending")}
                         </Text>
                       </View>
 
@@ -717,7 +719,7 @@ export default function MyEvents() {
                             backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
                           }}
                         >
-                          <Text className="text-xs font-semibold text-red-400">Event Ended</Text>
+                          <Text className="text-xs font-semibold text-red-400">{t("events.eventEnded")}</Text>
                         </View>
                       )}
                     </View>

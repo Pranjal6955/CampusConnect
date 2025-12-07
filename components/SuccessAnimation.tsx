@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { useEffect, useRef } from "react";
 import { Animated, Modal, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface SuccessAnimationProps {
   visible: boolean;
@@ -14,11 +15,15 @@ interface SuccessAnimationProps {
 export default function SuccessAnimation({
   visible,
   onClose,
-  message = "Successfully joined the event!",
-  title = "You're In!",
+  message,
+  title,
 }: SuccessAnimationProps) {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  
+  const displayMessage = message || t("events.joinSuccessMessage");
+  const displayTitle = title || t("events.joinSuccessTitle");
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -157,14 +162,14 @@ export default function SuccessAnimation({
               <Text
                 className={`text-xl font-bold mb-2 text-center ${isDark ? "text-white" : "text-gray-900"}`}
               >
-                {title}
+                {displayTitle}
               </Text>
 
               {/* Message */}
               <Text
                 className={`text-sm text-center mb-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}
               >
-                {message}
+                {displayMessage}
               </Text>
 
               {/* Close Button */}
@@ -175,7 +180,7 @@ export default function SuccessAnimation({
                   backgroundColor: "#22c55e",
                 }}
               >
-                <Text className="text-white font-semibold text-sm">OK</Text>
+                <Text className="text-white font-semibold text-sm">{t("common.ok")}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import { auth, db } from "../../config/firebase";
 import { Event, getOrganizerEvents, markAttendance } from "../../utils/events";
@@ -30,6 +31,7 @@ interface AttendanceRecord {
 }
 
 export default function Scanner() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [events, setEvents] = useState<Event[]>([]);
@@ -80,7 +82,7 @@ export default function Scanner() {
       const organizerEvents = await getOrganizerEvents(organizerId);
       setEvents(organizerEvents);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to load events");
+      Alert.alert(t("common.error"), error.message || t("events.title"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -232,10 +234,10 @@ export default function Scanner() {
         }}
       >
         <Text className={`text-2xl font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-          Attendance & Scanner
+          {t("scanner.title")}
         </Text>
         <Text className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-          {selectedEvent ? "Scan QR codes and view attendance" : "Select an event to manage attendance"}
+          {selectedEvent ? t("scanner.subtitleWithEvent") : t("scanner.subtitle")}
         </Text>
       </View>
 
@@ -245,10 +247,10 @@ export default function Scanner() {
           <View className="flex-1 justify-center items-center px-6">
             <Ionicons name="calendar-outline" size={64} color={isDark ? "#666" : "#999"} />
             <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-              No Events Found
+              {t("scanner.noEvents")}
             </Text>
             <Text className={`text-center ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-              Create an event first to start managing attendance
+              {t("scanner.noEventsDesc")}
             </Text>
           </View>
         ) : (
@@ -398,14 +400,14 @@ export default function Scanner() {
                           isDark ? "text-green-400" : "text-green-600"
                         }`}
                       >
-                        {attendanceRecords.length} Attended
+                        {t("scanner.totalAttendees", { count: attendanceRecords.length })}
                       </Text>
                     </View>
                   </View>
                   <Text
                     className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}
                   >
-                    of {selectedEvent.participantCount} registered
+                    {selectedEvent.participantCount} {t("events.attendees")}
                   </Text>
                 </View>
               </View>
@@ -429,7 +431,7 @@ export default function Scanner() {
             <View className="flex-row items-center justify-center">
               <Ionicons name="qr-code-outline" size={24} color="#fff" />
               <Text className="text-white text-lg font-bold ml-2">
-                Scan QR Code
+                {t("scanner.scanQRCode")}
               </Text>
             </View>
           </TouchableOpacity>
@@ -438,7 +440,7 @@ export default function Scanner() {
           <View className="flex-1 mt-4">
             <View className="px-4 mb-2">
               <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                Attendance Records
+                {t("scanner.attendanceList")}
               </Text>
             </View>
             {loadingAttendance ? (
@@ -449,10 +451,10 @@ export default function Scanner() {
               <View className="flex-1 justify-center items-center px-6">
                 <Ionicons name="clipboard-outline" size={64} color={isDark ? "#666" : "#999"} />
                 <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                  No Attendance Yet
+                  {t("scanner.noAttendance")}
                 </Text>
                 <Text className={`text-center ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                  Scan QR codes to mark attendance
+                  {t("scanner.scanQRCode")}
                 </Text>
               </View>
             ) : (

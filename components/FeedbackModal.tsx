@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { FeedbackFormData, submitFeedback } from "../utils/feedback";
 
 interface FeedbackModalProps {
@@ -27,6 +28,7 @@ export default function FeedbackModal({
   studentId,
   onSubmitSuccess,
 }: FeedbackModalProps) {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [rating, setRating] = useState<number>(0);
@@ -35,12 +37,12 @@ export default function FeedbackModal({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      Alert.alert("Rating Required", "Please select a rating before submitting.");
+      Alert.alert(t("feedback.ratingRequired"), t("feedback.ratingRequiredMessage"));
       return;
     }
 
     if (comment.trim().length === 0) {
-      Alert.alert("Comment Required", "Please provide your feedback comment.");
+      Alert.alert(t("feedback.commentRequired"), t("feedback.commentRequiredMessage"));
       return;
     }
 
@@ -52,9 +54,9 @@ export default function FeedbackModal({
       };
 
       await submitFeedback(eventId, studentId, formData);
-      Alert.alert("Success", "Thank you for your feedback!", [
+      Alert.alert(t("common.success"), t("feedback.thankYou"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => {
             setRating(0);
             setComment("");
@@ -66,7 +68,7 @@ export default function FeedbackModal({
         },
       ]);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to submit feedback");
+      Alert.alert(t("common.error"), error.message || t("feedback.failedToSubmit"));
     } finally {
       setSubmitting(false);
     }
@@ -123,14 +125,14 @@ export default function FeedbackModal({
           <View className={`px-5 pb-4 ${isDark ? "border-b border-gray-800" : "border-b border-gray-200"}`}>
             <View className="flex-row items-center justify-between">
               <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                Share Your Feedback
+                {t("feedback.shareFeedback")}
               </Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={28} color={isDark ? "#fff" : "#000"} />
               </TouchableOpacity>
             </View>
             <Text className={`text-sm mt-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-              Help us improve by sharing your experience
+              {t("feedback.helpUsImprove")}
             </Text>
           </View>
 
@@ -142,18 +144,18 @@ export default function FeedbackModal({
             {/* Rating Section */}
             <View className="mb-6">
               <Text className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
-                How would you rate this event?
+                {t("feedback.rateEvent")}
               </Text>
               <View className="flex-row items-center justify-center">
                 {renderStars(rating)}
               </View>
               {rating > 0 && (
                 <Text className={`text-center mt-3 text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                  {rating === 1 && "Poor"}
-                  {rating === 2 && "Fair"}
-                  {rating === 3 && "Good"}
-                  {rating === 4 && "Very Good"}
-                  {rating === 5 && "Excellent"}
+                  {rating === 1 && t("feedback.poor")}
+                  {rating === 2 && t("feedback.fair")}
+                  {rating === 3 && t("feedback.good")}
+                  {rating === 4 && t("feedback.veryGood")}
+                  {rating === 5 && t("feedback.excellent")}
                 </Text>
               )}
             </View>
@@ -161,10 +163,10 @@ export default function FeedbackModal({
             {/* Comment Section */}
             <View className="mb-6">
               <Text className={`text-lg font-semibold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>
-                Tell us more about your experience
+                {t("feedback.tellUsMore")}
               </Text>
               <TextInput
-                placeholder="Share your thoughts, suggestions, or any feedback..."
+                placeholder={t("feedback.commentPlaceholder")}
                 placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                 value={comment}
                 onChangeText={setComment}
@@ -177,7 +179,7 @@ export default function FeedbackModal({
                 }}
               />
               <Text className={`text-xs mt-2 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-                {comment.length} characters
+                {comment.length} {t("feedback.characters")}
               </Text>
             </View>
 
@@ -197,7 +199,7 @@ export default function FeedbackModal({
               }}
             >
               <Text className="text-white font-bold text-lg">
-                {submitting ? "Submitting..." : "Submit Feedback"}
+                {submitting ? t("feedback.submitting") : t("feedback.submitFeedback")}
               </Text>
             </TouchableOpacity>
 
@@ -207,7 +209,7 @@ export default function FeedbackModal({
               className="mt-3 rounded-xl py-4 items-center justify-center"
             >
               <Text className={`font-semibold text-base ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                Cancel
+                {t("common.cancel")}
               </Text>
             </TouchableOpacity>
           </ScrollView>

@@ -8,6 +8,7 @@ import {
   View,
   useColorScheme
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Event } from "../utils/events";
 import Badge from "./Badge";
 
@@ -28,6 +29,7 @@ export default function ViewEventModal({
   onDelete,
   onScan,
 }: ViewEventModalProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -113,7 +115,7 @@ export default function ViewEventModal({
                 </View>
                 {event.type === 'free' && (
                   <Badge
-                    label="Free"
+                    label={t("events.free")}
                     style="solid"
                     color="green"
                     icon="none"
@@ -137,7 +139,7 @@ export default function ViewEventModal({
                 }}
               >
                 <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
-                <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"} uppercase`}>Going</Text>
+                <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"} uppercase`}>{t("events.going")}</Text>
               </View>
               <View className={`flex-1 p-4 rounded-2xl ml-2 items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
                 style={{
@@ -149,13 +151,13 @@ export default function ViewEventModal({
                 }}
               >
                 <Text className={`text-2xl font-bold ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
-                <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"} uppercase`}>Limit</Text>
+                <Text className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-500"} uppercase`}>{t("events.limit")}</Text>
               </View>
             </View>
 
             {/* Description */}
             <View className="mb-8">
-              <Text className={`text-lg font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>About Event</Text>
+              <Text className={`text-lg font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>{t("events.aboutEvent")}</Text>
               <Text className={`text-base leading-7 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
                 {event.description}
               </Text>
@@ -169,7 +171,7 @@ export default function ViewEventModal({
                   <Ionicons name="calendar" size={20} color="#3b82f6" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Date</Text>
+                  <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>{t("events.date")}</Text>
                   <Text className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDate(event.startDate)}
                     {event.startDate !== event.endDate && ` - ${formatDate(event.endDate)}`}
@@ -184,7 +186,7 @@ export default function ViewEventModal({
                     <Ionicons name="time" size={20} color="#a855f7" />
                   </View>
                   <View className="flex-1">
-                    <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Time</Text>
+                    <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>{t("events.time")}</Text>
                     <Text className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
                       {formatTimeTo12Hour(event.startTime)} - {formatTimeTo12Hour(event.endTime)}
                     </Text>
@@ -198,7 +200,7 @@ export default function ViewEventModal({
                   <Ionicons name="location" size={20} color="#10b981" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Venue</Text>
+                  <Text className={`text-sm font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>{t("events.location")}</Text>
                   <Text className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
                     {event.venue}
                   </Text>
@@ -222,7 +224,7 @@ export default function ViewEventModal({
                 className="flex-1 py-4 rounded-2xl items-center flex-row justify-center bg-green-500 shadow-lg shadow-green-500/30"
               >
                 <Ionicons name="qr-code-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text className="text-white font-bold text-base">Scan QR</Text>
+                <Text className="text-white font-bold text-base">{t("events.scanQR")}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -233,7 +235,7 @@ export default function ViewEventModal({
               className={`${onScan ? "flex-1" : "flex-1"} py-4 rounded-2xl items-center flex-row justify-center ${isDark ? "bg-red-900/20" : "bg-red-50"}`}
             >
               <Ionicons name="trash-outline" size={20} color="#ef4444" style={{ marginRight: 8 }} />
-              <Text className="text-red-500 font-bold text-base">Delete</Text>
+              <Text className="text-red-500 font-bold text-base">{t("common.delete")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -244,7 +246,7 @@ export default function ViewEventModal({
               className="flex-1 py-4 rounded-2xl items-center flex-row justify-center bg-blue-500 shadow-lg shadow-blue-500/30"
             >
               <Ionicons name="create-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text className="text-white font-bold text-base">Edit Event</Text>
+              <Text className="text-white font-bold text-base">{t("events.editEvent")}</Text>
             </TouchableOpacity>
           </View>
         </View>

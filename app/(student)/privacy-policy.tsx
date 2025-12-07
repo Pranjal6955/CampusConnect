@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
           <Ionicons name="arrow-back" size={24} color={isDark ? "#fff" : "#000"} />
         </TouchableOpacity>
         <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-          Privacy Policy
+          {t("profile.privacyPolicy")}
         </Text>
       </View>
 
@@ -39,7 +39,7 @@ export default function PrivacyPolicy() {
       >
         {/* Last Updated */}
         <Text className={`text-sm mb-6 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-          Last Updated: January 2025
+          {t("privacy.lastUpdated")}: January 2025
         </Text>
 
         {/* Introduction */}

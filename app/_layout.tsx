@@ -10,6 +10,7 @@ import { parseEventDeepLink } from "../utils/deeplinks";
 import { auth } from "../config/firebase";
 import { getUserRole, getRoleBasedRoute } from "../utils/auth";
 import { getNotificationPreference } from "../utils/user";
+import "../config/i18n";
 
 // Configure notification behavior - checks user preference dynamically
 Notifications.setNotificationHandler({

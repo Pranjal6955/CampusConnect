@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { Modal, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { getPermissionExplanation, PermissionType } from "../utils/permissions";
 
 interface PermissionRequestModalProps {
@@ -18,6 +19,7 @@ export default function PermissionRequestModal({
   onDeny,
   onClose,
 }: PermissionRequestModalProps) {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const explanation = getPermissionExplanation(permissionType);
@@ -66,7 +68,7 @@ export default function PermissionRequestModal({
               className={`flex-1 py-3 rounded-xl items-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
             >
               <Text className={`font-semibold ${isDark ? "text-gray-300" : "text-gray-700"}`}>
-                Not Now
+                {t("permissions.later")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -74,7 +76,7 @@ export default function PermissionRequestModal({
               className="flex-1 py-3 rounded-xl items-center bg-blue-500"
             >
               <Text className="font-semibold text-white">
-                Allow
+                {t("permissions.grant")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -82,7 +84,7 @@ export default function PermissionRequestModal({
           {/* Optional note for location */}
           {permissionType === "location" && (
             <Text className={`text-xs text-center mt-4 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              This permission is optional. You can use the app without it.
+              {t("permissions.optionalNote")}
             </Text>
           )}
         </View>

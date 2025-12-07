@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import AttendanceQRCode from "../../../components/AttendanceQRCode";
 import Badge from "../../../components/Badge";
 import FeedbackModal from "../../../components/FeedbackModal";
@@ -21,6 +22,7 @@ import { Event, getEvent, registerForEvent, unregisterFromEvent } from "../../..
 import { canSubmitFeedback, getFeedbackByStudent } from "../../../utils/feedback";
 
 export default function EventDetails() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -68,7 +70,7 @@ export default function EventDetails() {
         }
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to load event details");
+      Alert.alert(t("common.error"), t("events.failedToLoadEventDetails"));
       console.error(error);
     } finally {
       setLoading(false);
@@ -174,11 +176,11 @@ export default function EventDetails() {
       if (now < startDate) {
         // Event hasn't started - countdown to start
         targetDate = startDate;
-        label = "Starts in";
+        label = t("events.startsInLabel");
       } else if (now >= startDate && now < endDate) {
         // Event is ongoing - countdown to end
         targetDate = endDate;
-        label = "Ends in";
+        label = t("events.endsInLabel");
       } else {
         // Event has ended
         setCountdown(null);
@@ -210,12 +212,12 @@ export default function EventDetails() {
     if (!event || !studentId) return;
     
     if (isEventOngoing()) {
-      Alert.alert("Event Ongoing", "You cannot join an event that has already started. Registration is only available before the event begins.");
+      Alert.alert(t("events.ongoing"), t("events.cannotJoinOngoing"));
       return;
     }
     
     if (isFull()) {
-      Alert.alert("Event Full", "This event has reached its participant limit.");
+      Alert.alert(t("events.eventFull"), t("events.eventFullMessage"));
       return;
     }
 
@@ -225,7 +227,7 @@ export default function EventDetails() {
       setShowSuccessAnimation(true);
       loadEvent();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to register for event");
+      Alert.alert(t("common.error"), error.message || t("events.failedToRegister"));
     } finally {
       setRegistering(false);
     }
@@ -235,21 +237,21 @@ export default function EventDetails() {
     if (!event || !studentId) return;
 
     Alert.alert(
-      "Unregister",
-      "Are you sure you want to unregister from this event?",
+      t("events.unregister"),
+      t("events.unregisterConfirm"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Unregister",
+          text: t("events.unregister"),
           style: "destructive",
           onPress: async () => {
             setRegistering(true);
             try {
               await unregisterFromEvent(event.id, studentId);
-              Alert.alert("Success", "Successfully unregistered from the event");
+              Alert.alert(t("common.success"), t("events.unregisterSuccess"));
               loadEvent();
             } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to unregister from event");
+              Alert.alert(t("common.error"), error.message || t("events.failedToUnregister"));
             } finally {
               setRegistering(false);
             }
@@ -272,17 +274,17 @@ export default function EventDetails() {
       <View className={`flex-1 ${isDark ? "bg-black" : "bg-gray-50"} justify-center items-center px-6`}>
         <Ionicons name="alert-circle-outline" size={64} color={isDark ? "#4b5563" : "#9ca3af"} />
         <Text className={`text-xl font-bold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-          Event Not Found
+          {t("events.eventNotFound")}
         </Text>
         <Text className={`text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-          The event you're looking for doesn't exist or has been removed.
+          {t("events.eventNotFoundMessage")}
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           className="mt-6 px-6 py-3 rounded-xl"
           style={{ backgroundColor: "#0EA5E9" }}
         >
-          <Text className="text-white font-bold">Go Back</Text>
+          <Text className="text-white font-bold">{t("common.back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -351,7 +353,7 @@ export default function EventDetails() {
                   {countdown.days.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Days
+                  {t("time.day_plural")}
                 </Text>
               </View>
               
@@ -370,7 +372,7 @@ export default function EventDetails() {
                   {countdown.hours.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Hours
+                  {t("time.hour_plural")}
                 </Text>
               </View>
               
@@ -389,7 +391,7 @@ export default function EventDetails() {
                   {countdown.minutes.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Minutes
+                  {t("time.minute_plural")}
                 </Text>
               </View>
               
@@ -408,7 +410,7 @@ export default function EventDetails() {
                   {countdown.seconds.toString().padStart(2, "0")}
                 </Text>
                 <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Seconds
+                  {t("time.second_plural")}
                 </Text>
               </View>
             </View>
@@ -452,7 +454,7 @@ export default function EventDetails() {
               }
               {registered && (
                 <Badge
-                  label="Registered"
+                  label={t("events.joined")}
                   style="solid"
                   color="green"
                   icon="checkmark"
@@ -460,7 +462,7 @@ export default function EventDetails() {
               )}
               {ended && (
                 <View className="ml-2 px-3 py-1 rounded-lg" style={{ backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)" }}>
-                  <Text className={`text-xs font-semibold ${isDark ? "text-red-400" : "text-red-600"}`}>Event Ended</Text>
+                  <Text className={`text-xs font-semibold ${isDark ? "text-red-400" : "text-red-600"}`}>{t("events.eventEnded")}</Text>
                 </View>
               )}
             </View>
@@ -483,7 +485,7 @@ export default function EventDetails() {
                 <Ionicons name="person-add" size={24} color="#0EA5E9" />
               </View>
               <Text className={`text-3xl font-extrabold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
-              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Attending</Text>
+              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>{t("events.attending")}</Text>
             </View>
             <View className={`flex-1 p-5 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
               style={{
@@ -500,7 +502,7 @@ export default function EventDetails() {
                 <Ionicons name="person-circle-outline" size={24} color={isDark ? "#9ca3af" : "#6b7280"} />
               </View>
               <Text className={`text-3xl font-extrabold mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
-              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Maximum</Text>
+              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>{t("events.capacity")}</Text>
             </View>
           </View>
 
@@ -518,7 +520,7 @@ export default function EventDetails() {
               <View className={`w-10 h-10 rounded-lg items-center justify-center mr-3 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
                 <Ionicons name="document-text-outline" size={22} color="#3b82f6" />
               </View>
-              <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>About Event</Text>
+              <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{t("events.aboutEvent")}</Text>
             </View>
             <Text className={`text-base leading-7 ${isDark ? "text-gray-300" : "text-gray-600"}`}>
               {event.description}
@@ -536,7 +538,7 @@ export default function EventDetails() {
             }}
           >
             <View className="p-5">
-              <Text className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Event Details</Text>
+              <Text className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>{t("events.eventDetails")}</Text>
               
               {/* Start Date & Time */}
               <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
@@ -544,7 +546,7 @@ export default function EventDetails() {
                   <Ionicons name="hourglass-outline" size={22} color="#10b981" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{t("createEvent.startDate")}</Text>
                   <Text className={`text-base font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDateShort(event.startDate)}
                   </Text>
@@ -565,7 +567,7 @@ export default function EventDetails() {
                   <Ionicons name="flag" size={22} color="#a855f7" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("createEvent.endDate")}</Text>
                   <Text className={`text-base font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDateShort(event.endDate)}
                   </Text>
@@ -586,7 +588,7 @@ export default function EventDetails() {
                   <Ionicons name="map-outline" size={22} color="#10b981" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Venue</Text>
+                  <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>{t("events.location")}</Text>
                   <Text className={`text-base font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
                     {event.venue}
                   </Text>
@@ -614,7 +616,7 @@ export default function EventDetails() {
                     }}
                   >
                     <Ionicons name="chatbubbles-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
-                    <Text className="text-white font-bold text-base">Provide Feedback</Text>
+                    <Text className="text-white font-bold text-base">{t("feedback.provideFeedback")}</Text>
                   </TouchableOpacity>
                 ) : hasSubmittedFeedback ? (
                   <View className="py-4 rounded-xl items-center flex-row justify-center"
@@ -625,7 +627,7 @@ export default function EventDetails() {
                     }}
                   >
                     <Ionicons name="checkmark-circle" size={22} color="#22c55e" style={{ marginRight: 10 }} />
-                    <Text className="text-green-500 font-bold text-base">Feedback Submitted</Text>
+                    <Text className="text-green-500 font-bold text-base">{t("feedback.feedbackSubmitted")}</Text>
                   </View>
                 ) : (
               <View className="py-4 rounded-xl items-center flex-row justify-center"
@@ -636,7 +638,7 @@ export default function EventDetails() {
                 }}
               >
             <Ionicons name="close-circle" size={22} color="#ef4444" style={{ marginRight: 10 }} />
-            <Text className="text-red-500 font-bold text-base">Event Ended</Text>
+            <Text className="text-red-500 font-bold text-base">{t("events.eventEnded")}</Text>
           </View>
                 )}
               </>
@@ -649,7 +651,7 @@ export default function EventDetails() {
             }}
           >
             <Ionicons name="time" size={22} color="#eab308" style={{ marginRight: 10 }} />
-            <Text className="text-yellow-500 font-bold text-base">Event Ongoing - Registration Closed</Text>
+            <Text className="text-yellow-500 font-bold text-base">{t("events.ongoingRegistrationClosed")}</Text>
           </View>
         ) : registered ? (
               <View className="flex-row" style={{ gap: 12 }}>
@@ -667,7 +669,7 @@ export default function EventDetails() {
                   }}
                 >
                   <Ionicons name="qr-code-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
-                  <Text className="text-white font-bold text-base">Show QR Code</Text>
+                  <Text className="text-white font-bold text-base">{t("events.scanQRCode")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleUnregister}
@@ -684,7 +686,7 @@ export default function EventDetails() {
                   ) : (
                     <>
                       <Ionicons name="close-circle-outline" size={22} color="#ef4444" style={{ marginRight: 10 }} />
-                      <Text className="text-red-500 font-bold text-base">Unregister</Text>
+                      <Text className="text-red-500 font-bold text-base">{t("events.unregister")}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -710,7 +712,7 @@ export default function EventDetails() {
                   <>
                     <Ionicons name="checkmark-circle-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
                     <Text className="text-white font-bold text-base">
-                      {ongoing ? "Event Ongoing" : full ? "Event Full" : "RSVP"}
+                      {ongoing ? t("events.ongoing") : full ? t("events.eventFull") : t("events.rsvp")}
                     </Text>
                   </>
                 )}
@@ -730,7 +732,7 @@ export default function EventDetails() {
             }}
           >
             <Ionicons name="share-social-outline" size={22} color="#8b5cf6" style={{ marginRight: 10 }} />
-            <Text className={`font-bold text-base ${isDark ? "text-purple-400" : "text-purple-600"}`}>Share Event</Text>
+            <Text className={`font-bold text-base ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("common.share")} {t("events.title")}</Text>
           </TouchableOpacity>
         </View>
         <View className="h-6" />
@@ -740,8 +742,8 @@ export default function EventDetails() {
       <SuccessAnimation
         visible={showSuccessAnimation}
         onClose={() => setShowSuccessAnimation(false)}
-        message="You've successfully joined this event!"
-        title="You're In! 🎉"
+        message={t("events.joinSuccessMessage")}
+        title={t("events.joinSuccessTitle")}
       />
 
       {/* QR Code Modal */}

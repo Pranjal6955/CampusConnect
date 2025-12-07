@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { auth } from "../../config/firebase";
 import { Event } from "../../utils/events";
 import {
@@ -28,6 +29,7 @@ interface EventWithFeedback extends Event {
 }
 
 export default function FeedbackScreen() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [events, setEvents] = useState<EventWithFeedback[]>([]);
@@ -81,7 +83,7 @@ export default function FeedbackScreen() {
       const eventsWithFeedback = await getOrganizerEventsWithFeedback(organizerId);
       setEvents(eventsWithFeedback);
     } catch (error) {
-      Alert.alert("Error", "Failed to load events");
+      Alert.alert(t("common.error"), t("events.title"));
       console.error(error);
     } finally {
       setLoading(false);
@@ -99,7 +101,7 @@ export default function FeedbackScreen() {
       setEventFeedback(feedback);
       setFeedbackStats(stats);
     } catch (error) {
-      Alert.alert("Error", "Failed to load feedback");
+      Alert.alert(t("common.error"), t("feedback.title"));
       console.error(error);
     } finally {
       setLoadingFeedback(false);
@@ -175,7 +177,7 @@ export default function FeedbackScreen() {
               <Ionicons name="arrow-back" size={24} color={isDark ? "#fff" : "#000"} />
             </TouchableOpacity>
             <Text className={`text-xl font-bold flex-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-              Event Feedback
+              {t("feedback.eventFeedback")}
             </Text>
           </View>
         </View>
@@ -220,7 +222,7 @@ export default function FeedbackScreen() {
             {feedbackStats && (
               <View className={`rounded-2xl p-5 mb-4 ${isDark ? "bg-gray-900" : "bg-white"}`}>
                 <Text className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
-                  Feedback Statistics
+                  {t("feedback.feedbackSubmitted")}
                 </Text>
                 <View className="flex-row items-center justify-between mb-4">
                   <View>
@@ -236,7 +238,7 @@ export default function FeedbackScreen() {
                       {feedbackStats.totalResponses}
                     </Text>
                     <Text className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                      {feedbackStats.totalResponses === 1 ? "Response" : "Responses"}
+                      {feedbackStats.totalResponses === 1 ? t("feedback.feedbackSubmitted") : t("feedback.feedbackSubmitted")}
                     </Text>
                   </View>
                 </View>
@@ -244,7 +246,7 @@ export default function FeedbackScreen() {
                 {/* Rating Distribution */}
                 <View className="mt-4">
                   <Text className={`text-sm font-semibold mb-3 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                    Rating Distribution
+                    {t("feedback.rating")}
                   </Text>
                   {[5, 4, 3, 2, 1].map((rating) => {
                     const count = feedbackStats.ratingDistribution[rating] || 0;
@@ -283,7 +285,7 @@ export default function FeedbackScreen() {
             {/* Feedback List */}
             <View className="mb-4">
               <Text className={`text-lg font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>
-                All Feedback ({eventFeedback.length})
+                {t("feedback.viewFeedback")} ({eventFeedback.length})
               </Text>
 
               {loadingFeedback ? (
@@ -294,10 +296,10 @@ export default function FeedbackScreen() {
                 <View className={`rounded-2xl p-8 items-center ${isDark ? "bg-gray-900" : "bg-white"}`}>
                   <Ionicons name="chatbubbles-outline" size={48} color={isDark ? "#4b5563" : "#9ca3af"} />
                   <Text className={`text-lg font-semibold mt-4 mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                    No feedback yet
+                    {t("feedback.noFeedback")}
                   </Text>
                   <Text className={`text-center ${isDark ? "text-gray-500" : "text-gray-500"}`}>
-                    Students who attended this event can provide feedback.
+                    {t("feedback.commentPlaceholder")}
                   </Text>
                 </View>
               ) : (

@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +24,7 @@ import { getRoleBasedRoute, storeUserData, storeUserRole } from "../../utils/aut
 type UserRole = "student" | "organizer";
 
 export default function Signup() {
+  const { t } = useTranslation();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -104,30 +106,30 @@ export default function Signup() {
     // Validate based on role
     if (role === "student") {
       if (!firstName || !lastName || !email || !birthDate || !phoneNumber || !password || !confirmPassword || !studentId) {
-        Alert.alert("Error", "Please fill in all fields");
+        Alert.alert(t("common.error"), t("auth.fillAllFields"));
         return;
       }
     } else {
       // organizer
       if (!organizationName || !email || !phoneNumber || !password || !confirmPassword) {
-        Alert.alert("Error", "Please fill in all fields");
+        Alert.alert(t("common.error"), t("auth.fillAllFields"));
         return;
       }
     }
 
     // Validate email format
     if (!validateEmail(email)) {
-      Alert.alert("Error", "Please enter a valid email address (e.g., example@gmail.com, example@yahoo.com)");
+      Alert.alert(t("common.error"), t("auth.invalidEmail"));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters");
+      Alert.alert(t("common.error"), t("auth.passwordTooShort"));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      Alert.alert(t("common.error"), t("auth.passwordsNotMatch"));
       return;
     }
 
@@ -164,15 +166,15 @@ export default function Signup() {
 
       // Redirect based on role
       const redirectPath = getRoleBasedRoute(role);
-      Alert.alert("Success", "Account created successfully!", [
+      Alert.alert(t("common.success"), t("auth.accountCreated"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => router.replace(redirectPath as any),
         },
       ]);
     } catch (error: any) {
-      const errorMessage = error?.message || error?.toString() || "An error occurred during signup";
-      Alert.alert("Signup Failed", errorMessage);
+      const errorMessage = error?.message || error?.toString() || t("auth.signupFailed");
+      Alert.alert(t("auth.signupFailed"), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -307,7 +309,7 @@ export default function Signup() {
                   letterSpacing: 1,
                 }}
               >
-                Campus Connect
+                {t("common.appName")}
               </Text>
               <View
                 style={{
@@ -324,13 +326,13 @@ export default function Signup() {
           {/* Title Section */}
           <View className="items-center mb-6">
             <Text className="text-3xl font-bold mb-2" style={{ color: isDark ? "#fff" : "#000" }}>
-              Welcome to Campus Connect
+              {t("common.welcome")}
             </Text>
             <Text
               className={isDark ? "text-gray-400" : "text-gray-600"}
               style={{ fontSize: 14, textAlign: "center", paddingHorizontal: 20 }}
             >
-              Create an account or log in to explore about our app
+              {t("common.welcomeSubtitle")}
             </Text>
           </View>
 
@@ -345,15 +347,15 @@ export default function Signup() {
                 backgroundColor: activeTab === "signup" ? "#0EA5E9" : "transparent",
               }}
             >
-              <Text
-                style={{
-                  textAlign: "center",
-                  fontWeight: "600",
-                  color: activeTab === "signup" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
-                }}
-              >
-                Sign Up
-              </Text>
+                <Text
+                  style={{
+                    textAlign: "center",
+                    fontWeight: "600",
+                    color: activeTab === "signup" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
+                  }}
+                >
+                  {t("auth.signup")}
+                </Text>
             </TouchableOpacity>
             <Link href="/login" asChild>
               <TouchableOpacity
@@ -371,7 +373,7 @@ export default function Signup() {
                     color: activeTab === "login" ? "#fff" : (isDark ? "#9CA3AF" : "#6B7280"),
                   }}
                 >
-                  Log In
+                  {t("auth.login")}
                 </Text>
               </TouchableOpacity>
             </Link>
@@ -387,7 +389,7 @@ export default function Signup() {
                   {/* First Name Input */}
                   <View style={{ flex: 1 }}>
                     <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                      First Name
+                      {t("signup.firstName")}
                     </Text>
                     <TextInput
                       style={{
@@ -400,7 +402,7 @@ export default function Signup() {
                         fontSize: 16,
                         color: isDark ? "#fff" : "#000",
                       }}
-                      placeholder="First name"
+                      placeholder={t("signup.firstname")}
                       placeholderTextColor={isDark ? "#666" : "#999"}
                       value={firstName}
                       onChangeText={setFirstName}
@@ -411,7 +413,7 @@ export default function Signup() {
                   {/* Last Name Input */}
                   <View style={{ flex: 1 }}>
                     <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                      Last Name
+                      {t("signup.lastName")}
                     </Text>
                     <TextInput
                       style={{
@@ -424,7 +426,7 @@ export default function Signup() {
                         fontSize: 16,
                         color: isDark ? "#fff" : "#000",
                       }}
-                      placeholder="Last name"
+                      placeholder={t("signup.lastname")}
                       placeholderTextColor={isDark ? "#666" : "#999"}
                       value={lastName}
                       onChangeText={setLastName}
@@ -436,7 +438,7 @@ export default function Signup() {
                 {/* Birth of Date Input */}
                 <View className="mb-4">
                   <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                    Birth of date
+                    {t("signup.birthDate")}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setShowDatePicker(true)}
@@ -458,7 +460,7 @@ export default function Signup() {
                         color: birthDate ? (isDark ? "#fff" : "#000") : (isDark ? "#666" : "#999"),
                       }}
                     >
-                      {birthDate ? formatDate(birthDate) : "Select your birth date"}
+                      {birthDate ? formatDate(birthDate) : t("signup.selectBirthDate")}
                     </Text>
                     <Ionicons name="calendar-outline" size={20} color={isDark ? "#9CA3AF" : "#6B7280"} />
                   </TouchableOpacity>
@@ -486,17 +488,17 @@ export default function Signup() {
                         >
                           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
                             <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                              <Text style={{ color: "#0EA5E9", fontSize: 16, fontWeight: "600" }}>Cancel</Text>
+                              <Text style={{ color: "#0EA5E9", fontSize: 16, fontWeight: "600" }}>{t("common.cancel")}</Text>
                             </TouchableOpacity>
                             <Text style={{ color: isDark ? "#fff" : "#000", fontSize: 18, fontWeight: "bold" }}>
-                              Select Date
+                              {t("signup.selectBirthDate")}
                             </Text>
                             <TouchableOpacity
                               onPress={() => {
                                 setShowDatePicker(false);
                               }}
                             >
-                              <Text style={{ color: "#0EA5E9", fontSize: 16, fontWeight: "600" }}>Done</Text>
+                              <Text style={{ color: "#0EA5E9", fontSize: 16, fontWeight: "600" }}>{t("common.done")}</Text>
                             </TouchableOpacity>
                           </View>
                           <DateTimePicker
@@ -528,7 +530,7 @@ export default function Signup() {
             {role === "organizer" && (
               <View className="mb-4">
                 <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                  Organization Name
+                  {t("signup.organizationName")}
                 </Text>
                 <TextInput
                   style={{
@@ -541,7 +543,7 @@ export default function Signup() {
                     fontSize: 16,
                     color: isDark ? "#fff" : "#000",
                   }}
-                  placeholder="Enter your organization name"
+                  placeholder={t("signup.enterOrganizationName")}
                   placeholderTextColor={isDark ? "#666" : "#999"}
                   value={organizationName}
                   onChangeText={setOrganizationName}
@@ -553,7 +555,7 @@ export default function Signup() {
             {/* Email Input */}
             <View className="mb-4">
               <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                Email
+                {t("auth.email")}
               </Text>
               <TextInput
                 style={{
@@ -566,7 +568,7 @@ export default function Signup() {
                   fontSize: 16,
                   color: isDark ? "#fff" : "#000",
                 }}
-                placeholder="Enter your email"
+                placeholder={t("auth.enterEmail")}
                 placeholderTextColor={isDark ? "#666" : "#999"}
                 value={email}
                 onChangeText={setEmail}
@@ -581,7 +583,7 @@ export default function Signup() {
               <>
                 <View className="mb-4">
                   <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                    Student ID
+                    {t("signup.studentId")}
                   </Text>
                   <TextInput
                     style={{
@@ -594,7 +596,7 @@ export default function Signup() {
                       fontSize: 16,
                       color: isDark ? "#fff" : "#000",
                     }}
-                    placeholder="Enter your student ID"
+                    placeholder={t("signup.enterStudentId")}
                     placeholderTextColor={isDark ? "#666" : "#999"}
                     value={studentId}
                     onChangeText={setStudentId}
@@ -605,7 +607,7 @@ export default function Signup() {
                 {/* Phone Number Input - Only for Students */}
                 <View className="mb-4">
                   <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                    Phone Number
+                    {t("signup.phoneNumber")}
                   </Text>
                   <TextInput
                     style={{
@@ -618,7 +620,7 @@ export default function Signup() {
                       fontSize: 16,
                       color: isDark ? "#fff" : "#000",
                     }}
-                    placeholder="Enter your phone number"
+                    placeholder={t("signup.enterPhoneNumber")}
                     placeholderTextColor={isDark ? "#666" : "#999"}
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
@@ -632,7 +634,7 @@ export default function Signup() {
             {role === "organizer" && (
               <View className="mb-4">
                 <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                  Phone Number
+                  {t("signup.phoneNumber")}
                 </Text>
                 <TextInput
                   style={{
@@ -645,7 +647,7 @@ export default function Signup() {
                     fontSize: 16,
                     color: isDark ? "#fff" : "#000",
                   }}
-                  placeholder="Enter your phone number"
+                  placeholder={t("signup.enterPhoneNumber")}
                   placeholderTextColor={isDark ? "#666" : "#999"}
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
@@ -657,7 +659,7 @@ export default function Signup() {
             {/* Set Password Input */}
             <View className="mb-4">
               <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                Set Password
+                {t("signup.setPassword")}
               </Text>
               <View
                 style={{
@@ -677,7 +679,7 @@ export default function Signup() {
                     fontSize: 16,
                     color: isDark ? "#fff" : "#000",
                   }}
-                  placeholder="Enter your password"
+                  placeholder={t("signup.enterPassword")}
                   placeholderTextColor={isDark ? "#666" : "#999"}
                   value={password}
                   onChangeText={setPassword}
@@ -701,7 +703,7 @@ export default function Signup() {
             {/* Confirm Password Input */}
             <View className="mb-6">
               <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                Confirm Password
+                {t("signup.confirmPassword")}
               </Text>
               <View
                 style={{
@@ -721,7 +723,7 @@ export default function Signup() {
                     fontSize: 16,
                     color: isDark ? "#fff" : "#000",
                   }}
-                  placeholder="Confirm your password"
+                  placeholder={t("signup.confirmPasswordPlaceholder")}
                   placeholderTextColor={isDark ? "#666" : "#999"}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -745,7 +747,7 @@ export default function Signup() {
             {/* Role Selection */}
             <View className="mb-4">
               <Text className="text-sm font-semibold mb-3" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                I am a
+                {t("signup.iamA")}
               </Text>
               <View className="flex-row gap-4">
                 <TouchableOpacity
@@ -782,7 +784,7 @@ export default function Signup() {
                       color: role === "student" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280"),
                     }}
                   >
-                    Student
+                    {t("signup.student")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -821,7 +823,7 @@ export default function Signup() {
                       color: role === "organizer" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280"),
                     }}
                   >
-                    Organizer
+                    {t("signup.organizer")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -847,7 +849,7 @@ export default function Signup() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18 }}>Register</Text>
+                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18 }}>{t("signup.register")}</Text>
               )}
             </TouchableOpacity>
           </View>

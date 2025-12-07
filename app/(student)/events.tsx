@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import AttendanceQRCode from "../../components/AttendanceQRCode";
 import { auth } from "../../config/firebase";
 import {
@@ -26,6 +27,7 @@ import {
 import { getUserProfile } from "../../utils/user";
 
 export default function Events() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const [events, setEvents] = useState<Event[]>([]);
@@ -213,9 +215,9 @@ export default function Events() {
     // If event has already started or ended
     if (diffMs <= 0) {
       if (isEventOngoing(event)) {
-        return "Ongoing";
+        return t("events.ongoing");
       }
-      return "Ended";
+      return t("events.completed");
     }
     
     const diffMins = Math.floor(diffMs / 60000);
@@ -238,25 +240,25 @@ export default function Events() {
       parts.push(`${remainingMins} ${remainingMins === 1 ? "min" : "min"}`);
     }
     
-    return parts.join(", ") + " left";
+    return parts.join(", ") + " " + t("time.left");
   };
 
   // Get status text for event
   const getEventStatusText = (event: Event): string => {
     if (isEventOngoing(event)) {
-      return "Ongoing";
+      return t("events.ongoing");
     } else if (isEventToday(event)) {
-      return "Today";
+      return t("events.today");
     } else if (isEventTomorrow(event)) {
-      return "Tomorrow";
+      return t("events.tomorrow");
     } else {
       const days = getDaysUntilEvent(event);
       if (days < 0) {
-        return "Past";
+        return t("events.completed");
       } else if (days === 0) {
-        return "Today";
+        return t("events.today");
       } else {
-        return `In ${days} days`;
+        return t("events.startsIn", { count: days });
       }
     }
   };
@@ -396,7 +398,7 @@ export default function Events() {
           {/* Welcome Message */}
           <View className="flex-1">
             <Text className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              Welcome {userData?.firstName || "User"} 👋
+              {t("common.welcome")} {userData?.firstName || t("common.appName")} 👋
             </Text>
           </View>
           
@@ -463,10 +465,10 @@ export default function Events() {
                     </View>
                     <View>
                       <Text className={`text-xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}>
-                        Event Spotlight
+                        {t("events.title")}
                       </Text>
                       <Text className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                        Handpicked events just for you
+                        {t("events.title")}
                       </Text>
                     </View>
                   </View>
@@ -511,7 +513,7 @@ export default function Events() {
                             }}
                           >
                             <Ionicons name="flash" size={10} color="#fff" />
-                            <Text className="text-xs font-bold text-white ml-0.5">FEATURED</Text>
+                            <Text className="text-xs font-bold text-white ml-0.5">{t("events.upcoming")}</Text>
                           </View>
                         </View>
                         
@@ -655,7 +657,7 @@ export default function Events() {
                                 }}
                               >
                                 <Text className={`text-xs font-semibold ${isDark ? "text-green-300" : "text-green-600"}`}>
-                                  Joined
+                                  {t("events.joined")}
                                 </Text>
                               </View>
                             )}
@@ -677,7 +679,7 @@ export default function Events() {
                             >
                               <Ionicons name="qr-code-outline" size={14} color="#22c55e" />
                               <Text className={`text-xs font-semibold ml-1.5 ${isDark ? "text-green-300" : "text-green-600"}`}>
-                                Show QR Code
+                                {t("events.scanQR")}
                               </Text>
                             </TouchableOpacity>
                           )}
@@ -710,7 +712,7 @@ export default function Events() {
                   <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
                 </View>
                 <TextInput
-                  placeholder="Search events..."
+                  placeholder={t("events.searchEvents")}
                   placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -899,10 +901,10 @@ export default function Events() {
         <View className="px-5">
           <View className="flex-row items-center justify-between mb-4">
             <Text className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-              All Events
+              {t("events.title")}
             </Text>
             <Text className={`text-sm font-medium ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              {filteredEvents.length} found
+              {filteredEvents.length} {t("common.all")}
             </Text>
           </View>
 
@@ -913,12 +915,12 @@ export default function Events() {
                 <Ionicons name="calendar-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
               </View>
               <Text className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                No events found
+                {t("events.noEvents")}
               </Text>
               <Text className={`text-center px-10 ${isDark ? "text-gray-500" : "text-gray-500"}`}>
                 {searchQuery || selectedCategory !== "All" || selectedStatus !== "All"
-                  ? "Try adjusting your search or filters"
-                  : "No events available at the moment"}
+                  ? t("events.searchEvents")
+                  : t("events.noEventsDesc")}
               </Text>
             </View>
           ) : (
@@ -1037,7 +1039,7 @@ export default function Events() {
                           <Ionicons name="hourglass-outline" size={12} color="#10b981" />
                         </View>
                         <View className="flex-1">
-                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{t("createEvent.startDate")}</Text>
                             <Text
                               numberOfLines={1}
                               className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
@@ -1053,7 +1055,7 @@ export default function Events() {
                           <Ionicons name="flag" size={12} color="#a855f7" />
                         </View>
                         <View className="flex-1">
-                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>{t("createEvent.endDate")}</Text>
                             <Text
                               numberOfLines={1}
                               className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
@@ -1083,7 +1085,7 @@ export default function Events() {
                           className={`text-sm ml-2 font-medium text-[#0EA5E9]`}
                           numberOfLines={1}
                         >
-                          {event.participantCount} attending
+                          {event.participantCount} {t("events.attending")}
                         </Text>
                       </View>
 
@@ -1094,7 +1096,7 @@ export default function Events() {
                             backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
                           }}
                         >
-                          <Text className="text-xs font-semibold text-red-400">Event Ended</Text>
+                          <Text className="text-xs font-semibold text-red-400">{t("events.eventEnded")}</Text>
                         </View>
                       )}
                     </View>
