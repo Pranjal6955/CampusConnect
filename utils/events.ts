@@ -26,6 +26,20 @@ import {
   schedulePostEventFeedback,
 } from "./notifications";
 import { deleteImageFromStorage, uploadImageWithPath } from "./storage";
+import {
+  fetchWithCache,
+  getCachedEvent,
+  getCachedEvents,
+  getCachedOrganizerEvents,
+  getCachedStudentEvents,
+  invalidateEventCaches,
+  setCachedEvent,
+  setCachedEvents,
+  setCachedOrganizerEvents,
+  setCachedStudentEvents,
+  getCachedAttendance,
+  setCachedAttendance,
+} from "./cache";
 
 export type EventType = "free" | "paid";
 export type EventCategory = "Club Event" | "Seminar" | "Sports" | "Cultural" | "Workshop" | "Fest" | "Hackathon";
@@ -136,6 +150,9 @@ export async function createEvent(
 
     await addDoc(collection(db, "events"), eventData);
     
+    // Invalidate caches since a new event was created
+    await invalidateEventCaches();
+    
     // Send event announcement notification to all students
     const createdEvent: Event = {
       id: eventId,
@@ -155,45 +172,60 @@ export async function createEvent(
 
 // Get all events for an organizer
 export async function getOrganizerEvents(organizerId: string): Promise<Event[]> {
-  try {
-    const q = query(collection(db, "events"), where("organizerId", "==", organizerId));
-    const querySnapshot = await getDocs(q);
-    const events: Event[] = [];
+  return fetchWithCache(
+    `organizer-events-${organizerId}`,
+    async () => {
+      const q = query(collection(db, "events"), where("organizerId", "==", organizerId));
+      const querySnapshot = await getDocs(q);
+      const events: Event[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      events.push({
-        id: doc.id,
-        ...data,
-        participants: data.participants || [], // Ensure participants is always an array
-      } as Event);
-    });
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        events.push({
+          id: doc.id,
+          ...data,
+          participants: data.participants || [], // Ensure participants is always an array
+        } as Event);
+      });
 
-    return events.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    throw error;
-  }
+      return events.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    },
+    (events) => setCachedOrganizerEvents(organizerId, events),
+    () => getCachedOrganizerEvents(organizerId)
+  ).then((result) => result.data);
 }
 
 // Get single event
 export async function getEvent(eventId: string): Promise<Event | null> {
   try {
-    const eventDoc = await getDoc(doc(db, "events", eventId));
-    if (eventDoc.exists()) {
-      const data = eventDoc.data();
-      return {
-        id: eventDoc.id,
-        ...data,
-        participants: data.participants || [], // Ensure participants is always an array
-      } as Event;
-    }
-    return null;
+    return await fetchWithCache(
+      `event-${eventId}`,
+      async () => {
+        const eventDoc = await getDoc(doc(db, "events", eventId));
+        if (eventDoc.exists()) {
+          const data = eventDoc.data();
+          return {
+            id: eventDoc.id,
+            ...data,
+            participants: data.participants || [], // Ensure participants is always an array
+          } as Event;
+        }
+        return null;
+      },
+      async (event) => {
+        if (event) {
+          await setCachedEvent(eventId, event);
+        }
+      },
+      () => getCachedEvent(eventId)
+    ).then((result) => result.data);
   } catch (error) {
     console.error("Error fetching event:", error);
-    throw error;
+    // Try to get from cache as fallback
+    const cached = await getCachedEvent(eventId);
+    return cached;
   }
 }
 
@@ -254,6 +286,9 @@ export async function updateEvent(
       updatedAt: new Date().toISOString(),
     });
 
+    // Invalidate caches since event was updated
+    await invalidateEventCaches(eventId);
+
     // Send update notification if there are changes
     if (changes.length > 0) {
       const updatedEvent = await getEvent(eventId);
@@ -284,6 +319,9 @@ export async function deleteEvent(eventId: string, imageUrl: string): Promise<vo
     // Delete event document
     await deleteDoc(doc(db, "events", eventId));
 
+    // Invalidate caches since event was deleted
+    await invalidateEventCaches(eventId);
+
     // Send cancellation notification if event existed
     if (eventData) {
       const { id: _, ...eventDataWithoutId } = eventData;
@@ -311,26 +349,28 @@ export async function deleteEvent(eventId: string, imageUrl: string): Promise<vo
 
 // Get all events (for students to browse)
 export async function getAllEvents(): Promise<Event[]> {
-  try {
-    const querySnapshot = await getDocs(collection(db, "events"));
-    const events: Event[] = [];
+  return fetchWithCache(
+    "all-events",
+    async () => {
+      const querySnapshot = await getDocs(collection(db, "events"));
+      const events: Event[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      events.push({
-        id: doc.id,
-        ...data,
-        participants: data.participants || [], // Ensure participants is always an array
-      } as Event);
-    });
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        events.push({
+          id: doc.id,
+          ...data,
+          participants: data.participants || [], // Ensure participants is always an array
+        } as Event);
+      });
 
-    return events.sort((a, b) => 
-      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-    );
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    throw error;
-  }
+      return events.sort((a, b) => 
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      );
+    },
+    (events) => setCachedEvents(events),
+    () => getCachedEvents()
+  ).then((result) => result.data);
 }
 
 // Register for an event
@@ -365,6 +405,9 @@ export async function registerForEvent(eventId: string, studentId: string): Prom
       participantCount: newParticipantCount,
       updatedAt: new Date().toISOString(),
     });
+
+    // Invalidate caches since event was updated
+    await invalidateEventCaches(eventId);
 
     // Get updated event for notifications
     const { id: _, ...eventDataWithoutId } = eventData;
@@ -439,6 +482,9 @@ export async function unregisterFromEvent(eventId: string, studentId: string): P
       updatedAt: new Date().toISOString(),
     });
 
+    // Invalidate caches since event was updated
+    await invalidateEventCaches(eventId);
+
     // Cancel all scheduled notifications for this event and student
     cancelEventReminders(eventId, studentId).catch((err) =>
       console.error("Error cancelling event reminders:", err)
@@ -451,30 +497,32 @@ export async function unregisterFromEvent(eventId: string, studentId: string): P
 
 // Get events a student is registered for
 export async function getStudentEvents(studentId: string): Promise<Event[]> {
-  try {
-    const querySnapshot = await getDocs(collection(db, "events"));
-    const events: Event[] = [];
+  return fetchWithCache(
+    `student-events-${studentId}`,
+    async () => {
+      const querySnapshot = await getDocs(collection(db, "events"));
+      const events: Event[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const eventData = doc.data() as Event;
-      const participants = eventData.participants || []; // Ensure participants is always an array
-      if (participants.includes(studentId)) {
-        const { id: _, ...eventDataWithoutId } = eventData;
-        events.push({
-          id: doc.id,
-          ...eventDataWithoutId,
-          participants: participants, // Ensure participants is set
-        } as Event);
-      }
-    });
+      querySnapshot.forEach((doc) => {
+        const eventData = doc.data() as Event;
+        const participants = eventData.participants || []; // Ensure participants is always an array
+        if (participants.includes(studentId)) {
+          const { id: _, ...eventDataWithoutId } = eventData;
+          events.push({
+            id: doc.id,
+            ...eventDataWithoutId,
+            participants: participants, // Ensure participants is set
+          } as Event);
+        }
+      });
 
-    return events.sort((a, b) => 
-      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-    );
-  } catch (error) {
-    console.error("Error fetching student events:", error);
-    throw error;
-  }
+      return events.sort((a, b) => 
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      );
+    },
+    (events) => setCachedStudentEvents(studentId, events),
+    () => getCachedStudentEvents(studentId)
+  ).then((result) => result.data);
 }
 
 // Mark attendance for a student at an event
@@ -511,6 +559,9 @@ export async function markAttendance(eventId: string, studentId: string): Promis
       organizerId: eventData.organizerId,
     });
 
+    // Invalidate attendance cache
+    await invalidateEventCaches(eventId);
+
     // Send attendance confirmation notification
     const { id: _, ...eventDataWithoutId } = eventData;
     const event: Event = {
@@ -528,26 +579,28 @@ export async function markAttendance(eventId: string, studentId: string): Promis
 
 // Get attendance for an event
 export async function getEventAttendance(eventId: string): Promise<Array<{ studentId: string; markedAt: string }>> {
-  try {
-    const q = query(collection(db, "attendance"), where("eventId", "==", eventId));
-    const querySnapshot = await getDocs(q);
-    const attendance: Array<{ studentId: string; markedAt: string }> = [];
+  return fetchWithCache(
+    `attendance-${eventId}`,
+    async () => {
+      const q = query(collection(db, "attendance"), where("eventId", "==", eventId));
+      const querySnapshot = await getDocs(q);
+      const attendance: Array<{ studentId: string; markedAt: string }> = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      attendance.push({
-        studentId: data.studentId,
-        markedAt: data.markedAt,
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        attendance.push({
+          studentId: data.studentId,
+          markedAt: data.markedAt,
+        });
       });
-    });
 
-    return attendance.sort((a, b) => 
-      new Date(b.markedAt).getTime() - new Date(a.markedAt).getTime()
-    );
-  } catch (error) {
-    console.error("Error fetching attendance:", error);
-    throw error;
-  }
+      return attendance.sort((a, b) => 
+        new Date(b.markedAt).getTime() - new Date(a.markedAt).getTime()
+      );
+    },
+    (attendance) => setCachedAttendance(eventId, attendance),
+    () => getCachedAttendance(eventId)
+  ).then((result) => result.data);
 }
 
 // Check if a student's attendance is marked

@@ -1,8 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
-import { clearAuthStorage } from "../../utils/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -17,8 +15,12 @@ import {
 } from "react-native";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import EditProfileModal from "../../components/EditProfileModal";
-import { auth, db } from "../../config/firebase";
-import { UpdateUserData, updateUserProfile } from "../../utils/user";
+import { auth } from "../../config/firebase";
+import { getUserProfile } from "../../utils/user";
+import { clearAuthStorage } from "../../utils/auth";
+import { cancelAllScheduledNotifications } from "../../utils/notifications";
+import { deleteImageFromStorage, pickImage, takePhoto, uploadImageWithPath } from "../../utils/storage";
+import { getNotificationPreference, updateNotificationPreference, UpdateUserData, updateUserProfile } from "../../utils/user";
 
 export default function Profile() {
     const router = useRouter();
@@ -32,6 +34,7 @@ export default function Profile() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
     const handleUpdateProfile = async (data: UpdateUserData) => {
         if (!auth.currentUser) return;
@@ -48,6 +51,93 @@ export default function Profile() {
         }
     };
 
+    const handleUpdateProfilePicture = async () => {
+        if (!auth.currentUser) return;
+
+        // Show options to choose camera or gallery
+        Alert.alert(
+            "Update Profile Picture",
+            "Choose an option",
+            [
+                {
+                    text: "Camera",
+                    onPress: async () => {
+                        try {
+                            const uri = await takePhoto({
+                                allowsEditing: true,
+                                aspect: [1, 1],
+                                quality: 0.8,
+                            });
+                            if (uri) {
+                                await uploadAndUpdatePhoto(uri);
+                            }
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message || "Failed to take photo");
+                        }
+                    },
+                },
+                {
+                    text: "Gallery",
+                    onPress: async () => {
+                        try {
+                            const uri = await pickImage({
+                                allowsEditing: true,
+                                aspect: [1, 1],
+                                quality: 0.8,
+                            });
+                            if (uri) {
+                                await uploadAndUpdatePhoto(uri);
+                            }
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message || "Failed to pick image");
+                        }
+                    },
+                },
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+            ],
+            { cancelable: true }
+        );
+    };
+
+    const uploadAndUpdatePhoto = async (uri: string) => {
+        if (!auth.currentUser) return;
+
+        setUploadingPhoto(true);
+        try {
+            // Delete old profile picture from Cloudinary if it exists
+            if (userData?.photoURL) {
+                try {
+                    await deleteImageFromStorage(userData.photoURL);
+                } catch (deleteError) {
+                    // Log but don't fail - old image deletion is not critical
+                    console.warn("Failed to delete old profile picture:", deleteError);
+                }
+            }
+
+            // Upload new image to Cloudinary
+            const photoURL = await uploadImageWithPath(
+                uri,
+                "profiles",
+                auth.currentUser.uid,
+                "profile"
+            );
+
+            // Update user profile with new photoURL
+            await updateUserProfile(auth.currentUser.uid, { photoURL });
+
+            Alert.alert("Success", "Profile picture updated successfully");
+            loadUserData(); // Refresh data to show new image
+        } catch (error: any) {
+            console.error("Error updating profile picture:", error);
+            Alert.alert("Error", error.message || "Failed to update profile picture");
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
     useEffect(() => {
         loadUserData();
     }, []);
@@ -56,9 +146,9 @@ export default function Profile() {
         try {
             const user = auth.currentUser;
             if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
+                const profile = await getUserProfile(user.uid);
+                if (profile) {
+                    const data = profile;
 
                     // Fetch events to calculate stats - No longer needed for display but might be useful later
                     // For now, we can keep it or remove it. Since we removed the UI, let's remove the logic to save reads.
@@ -80,6 +170,10 @@ export default function Profile() {
                     }
                     */
                     setUserData(data);
+                    
+                    // Load notification preference
+                    const notificationPref = await getNotificationPreference(user.uid);
+                    setNotificationsEnabled(notificationPref);
                 }
             }
         } catch (error) {
@@ -219,6 +313,8 @@ export default function Profile() {
                             )}
                         </View>
                         <TouchableOpacity
+                            onPress={handleUpdateProfilePicture}
+                            disabled={uploadingPhoto}
                             className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-sky-500 items-center justify-center border-2 border-white dark:border-gray-900"
                             style={{
                                 shadowColor: "#000",
@@ -226,9 +322,14 @@ export default function Profile() {
                                 shadowOpacity: 0.2,
                                 shadowRadius: 4,
                                 elevation: 4,
+                                opacity: uploadingPhoto ? 0.6 : 1,
                             }}
                         >
-                            <Ionicons name="camera" size={14} color="#fff" />
+                            {uploadingPhoto ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <Ionicons name="camera" size={14} color="#fff" />
+                            )}
                         </TouchableOpacity>
                     </View>
 
@@ -327,7 +428,28 @@ export default function Profile() {
                     rightElement={
                         <Switch
                             value={notificationsEnabled}
-                            onValueChange={setNotificationsEnabled}
+                            onValueChange={async (enabled) => {
+                                if (!auth.currentUser) return;
+                                
+                                try {
+                                    // Update preference in Firestore
+                                    await updateNotificationPreference(auth.currentUser.uid, enabled);
+                                    setNotificationsEnabled(enabled);
+                                    
+                                    // If disabling, cancel all scheduled notifications
+                                    if (!enabled) {
+                                        await cancelAllScheduledNotifications();
+                                        Alert.alert("Notifications Disabled", "All scheduled notifications have been cancelled.");
+                                    } else {
+                                        Alert.alert("Notifications Enabled", "You will now receive event notifications.");
+                                    }
+                                } catch (error) {
+                                    console.error("Error updating notification preference:", error);
+                                    Alert.alert("Error", "Failed to update notification settings");
+                                    // Revert the toggle on error
+                                    setNotificationsEnabled(!enabled);
+                                }
+                            }}
                             trackColor={{ false: "#767577", true: "#0EA5E9" }}
                             thumbColor={notificationsEnabled ? "#fff" : "#f4f3f4"}
                         />

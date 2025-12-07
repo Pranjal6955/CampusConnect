@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -18,7 +17,7 @@ import Badge from "../../components/Badge";
 import CreateEventModal from "../../components/CreateEventModal";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import ViewEventModal from "../../components/ViewEventModal";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import {
   Event,
   EventFormData,
@@ -29,6 +28,7 @@ import {
   updateEvent,
   checkAndNotifyLowAttendance,
 } from "../../utils/events";
+import { getUserProfile } from "../../utils/user";
 
 export default function Events() {
   const { colorScheme } = useColorScheme();
@@ -226,9 +226,9 @@ export default function Events() {
     try {
       const user = auth.currentUser;
       if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserData(userDoc.data());
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          setUserData(profile);
         }
       }
     } catch (error) {
@@ -387,80 +387,84 @@ export default function Events() {
             </TouchableOpacity>
           </View>
 
-          {/* Search Bar */}
-          <View className="mb-6">
-            <View
-              className={`flex-row items-center px-4 py-2 rounded-2xl ${isDark ? "bg-gray-900" : "bg-white"
-                }`}
-              style={{
-                shadowColor: "#0EA5E9",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-                borderWidth: 1,
-                borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
-              }}
-            >
-              <Ionicons name="search" size={18} color="#0EA5E9" />
-              <TextInput
-                placeholder="Search events..."
-                placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
-                value={searchQuery}
-                onChangeText={(text) => {
-                  setSearchQuery(text);
+          {/* Search Bar and Category Filter - Side by Side */}
+          <View className="flex-row mb-4" style={{ gap: 12 }}>
+            {/* Search Bar */}
+            <View style={{ flex: 3 }}>
+              <View
+                className={`flex-row items-center px-4 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"
+                  }`}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  height: 44,
                 }}
-                className={`flex-1 ml-2 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
-                style={{ height: 36 }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="search"
-                clearButtonMode="never"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity 
-                  onPress={() => {
-                    setSearchQuery("");
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close-circle" size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
-                </TouchableOpacity>
-              )}
+              >
+                <View className={`w-7 h-7 rounded-lg items-center justify-center mr-2 ${isDark ? "bg-gray-700" : "bg-white"}`}>
+                  <Ionicons name="search" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
+                </View>
+                <TextInput
+                  placeholder="Search events..."
+                  placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className={`flex-1 text-sm ${isDark ? "text-white" : "text-gray-900"}`}
+                  style={{ height: 36 }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity 
+                    onPress={() => setSearchQuery("")}
+                    className={`w-6 h-6 rounded-full items-center justify-center ${isDark ? "bg-gray-700" : "bg-gray-200"}`}
+                  >
+                    <Ionicons name="close" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
 
-          {/* Category Dropdown */}
-          <View className="mb-4">
-            <View className="flex-1">
+            {/* Category Dropdown */}
+            <View style={{ flex: 1, maxWidth: 150 }}>
               <TouchableOpacity
                 onPress={() => {
                   setShowCategoryDropdown(!showCategoryDropdown);
                 }}
-                className={`flex-row items-center justify-between px-3 py-2 rounded-lg ${isDark ? "bg-gray-900" : "bg-white"}`}
+                className={`flex-row items-center justify-between px-2.5 rounded-xl ${isDark ? "bg-gray-800/50" : "bg-gray-100"}`}
                 style={{
-                  borderWidth: 1,
-                  borderColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                  borderWidth: 1.5,
+                  borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
+                  height: 44,
                 }}
               >
-                <Text className={`text-sm font-medium flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
-                  {selectedCategory}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                <View className="flex-row items-center flex-1">
+                  <View className={`w-6 h-6 rounded-lg items-center justify-center mr-1.5 ${isDark ? "bg-gray-700" : "bg-white"}`}>
+                    <Ionicons name="grid" size={12} color={isDark ? "#9ca3af" : "#6b7280"} />
+                  </View>
+                  <Text className={`text-xs font-semibold flex-1 ${isDark ? "text-white" : "text-gray-900"}`} numberOfLines={1}>
+                    {selectedCategory}
+                  </Text>
+                </View>
+                <Ionicons 
+                  name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
+                  size={14} 
+                  color={isDark ? "#9ca3af" : "#6b7280"} 
+                />
               </TouchableOpacity>
 
               {/* Category Dropdown Menu */}
               {showCategoryDropdown && (
                 <View
-                  className={`absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden ${isDark ? "bg-gray-900" : "bg-white"}`}
+                  className={`absolute top-full right-0 mt-2 rounded-xl overflow-hidden ${isDark ? "bg-gray-800" : "bg-white"}`}
                   style={{
                     shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 8,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 12,
+                    elevation: 10,
                     zIndex: 1000,
                     maxHeight: 300,
+                    minWidth: 200,
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(107, 114, 128, 0.3)" : "rgba(229, 231, 235, 1)",
                   }}
                 >
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
@@ -472,24 +476,29 @@ export default function Events() {
                           setShowCategoryDropdown(false);
                         }}
                         activeOpacity={0.7}
-                        className={`px-4 py-3 flex-row items-center ${
+                        className={`px-4 py-3.5 flex-row items-center ${
                           selectedCategory === category
                             ? isDark
                               ? "bg-blue-900/30"
                               : "bg-blue-50"
                             : isDark
-                            ? "bg-gray-900"
+                            ? "bg-gray-800"
                             : "bg-white"
                         }`}
+                        style={{
+                          borderBottomWidth: index < categories.length - 1 ? 1 : 0,
+                          borderBottomColor: isDark ? "rgba(107, 114, 128, 0.2)" : "rgba(229, 231, 235, 1)",
+                        }}
                       >
                         {selectedCategory === category && (
-                          <Ionicons name="checkmark" size={18} color="#0EA5E9" style={{ marginRight: 8, flexShrink: 0 }} />
+                          <View className={`w-6 h-6 rounded-full items-center justify-center mr-3 ${isDark ? "bg-blue-600" : "bg-blue-500"}`}>
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          </View>
                         )}
-                        {selectedCategory !== category && <View style={{ width: 26, flexShrink: 0 }} />}
+                        {selectedCategory !== category && <View style={{ width: 38, flexShrink: 0 }} />}
                         <Text 
-                          className={`text-sm flex-1 ${isDark ? "text-gray-100" : "text-gray-900"}`}
-                          numberOfLines={2}
-                          style={{ flexWrap: 'wrap' }}
+                          className={`text-base flex-1 font-medium ${isDark ? "text-white" : "text-gray-900"}`}
+                          numberOfLines={1}
                         >
                           {category}
                         </Text>

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -14,12 +13,13 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import {
   checkUpcomingEvents,
   Event,
   getStudentEvents,
 } from "../../utils/events";
+import { getUserProfile } from "../../utils/user";
 
 export default function MyEvents() {
   const { colorScheme } = useColorScheme();
@@ -181,9 +181,9 @@ export default function MyEvents() {
     try {
       const user = auth.currentUser;
       if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserData(userDoc.data());
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          setUserData(profile);
         }
       }
     } catch (error) {

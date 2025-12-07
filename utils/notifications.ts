@@ -1,6 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { SchedulableTriggerInputTypes } from "expo-notifications";
 import { Platform } from "react-native";
+import { auth } from "../config/firebase";
+import { getNotificationPreference } from "./user";
 import { Event } from "./events";
 
 // Configure notification behavior
@@ -99,9 +101,17 @@ export async function scheduleLocalNotification(
   title: string,
   body: string,
   data: NotificationData,
-  trigger: Date | number
+  trigger: Date | number,
+  userId?: string
 ): Promise<string | null> {
   try {
+    // Check if notifications are enabled for this user
+    const enabled = await isNotificationEnabled(userId);
+    if (!enabled) {
+      console.log("Notifications disabled for user, skipping scheduled notification");
+      return null;
+    }
+
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
       return null;
@@ -175,14 +185,38 @@ export async function cancelAllScheduledNotifications(): Promise<void> {
 }
 
 /**
+ * Check if notifications are enabled for the current user
+ */
+async function isNotificationEnabled(userId?: string): Promise<boolean> {
+  try {
+    const currentUserId = userId || auth.currentUser?.uid;
+    if (!currentUserId) {
+      return false; // No user, don't send notifications
+    }
+    return await getNotificationPreference(currentUserId);
+  } catch (error) {
+    console.error("Error checking notification preference:", error);
+    return true; // Default to enabled on error
+  }
+}
+
+/**
  * Send immediate notification
  */
 export async function sendNotification(
   title: string,
   body: string,
-  data: NotificationData
+  data: NotificationData,
+  userId?: string
 ): Promise<void> {
   try {
+    // Check if notifications are enabled for this user
+    const enabled = await isNotificationEnabled(userId);
+    if (!enabled) {
+      console.log("Notifications disabled for user, skipping notification");
+      return;
+    }
+
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
       return;
@@ -218,7 +252,7 @@ export async function sendNotification(
  * 2. Query all student push tokens from Firestore
  * 3. Send notifications via Expo Push API or FCM
  */
-export async function notifyEventAnnouncement(event: Event): Promise<void> {
+export async function notifyEventAnnouncement(event: Event, userId?: string): Promise<void> {
   try {
     const title = "🎉 New Event: " + event.title;
     const body = "Tap to RSVP and join the event!";
@@ -230,7 +264,7 @@ export async function notifyEventAnnouncement(event: Event): Promise<void> {
     // For now, we'll use local notifications
     // TODO: In production, send push notifications to all students via FCM/Expo Push
     // Get all students (users with role 'student') and send push notifications
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, userId);
     
     console.log(`Event announcement notification sent for event: ${event.title}`);
   } catch (error) {
@@ -251,7 +285,7 @@ export async function notifyRSVPConfirmation(event: Event, studentId: string): P
       studentId,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, studentId);
   } catch (error) {
     console.error("Error sending RSVP confirmation notification:", error);
   }
@@ -282,7 +316,8 @@ export async function scheduleEventReminders(event: Event, studentId: string): P
           eventId: event.id,
           studentId,
         },
-        new Date(reminder24hTime)
+        new Date(reminder24hTime),
+        studentId
       );
     }
 
@@ -299,7 +334,8 @@ export async function scheduleEventReminders(event: Event, studentId: string): P
           eventId: event.id,
           studentId,
         },
-        new Date(reminder1hTime)
+        new Date(reminder1hTime),
+        studentId
       );
     }
   } catch (error) {
@@ -320,7 +356,7 @@ export async function notifyAttendanceMarked(event: Event, studentId: string): P
       studentId,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, studentId);
   } catch (error) {
     console.error("Error sending attendance notification:", error);
   }
@@ -331,7 +367,8 @@ export async function notifyAttendanceMarked(event: Event, studentId: string): P
  */
 export async function notifyEventUpdate(
   event: Event,
-  changes: { field: string; oldValue: any; newValue: any }[]
+  changes: { field: string; oldValue: any; newValue: any }[],
+  userId?: string
 ): Promise<void> {
   try {
     // Get all registered participants
@@ -356,7 +393,7 @@ export async function notifyEventUpdate(
     };
 
     // Send to all participants
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, userId);
   } catch (error) {
     console.error("Error sending event update notification:", error);
   }
@@ -365,7 +402,7 @@ export async function notifyEventUpdate(
 /**
  * 6. Event Cancelled Notification
  */
-export async function notifyEventCancelled(event: Event): Promise<void> {
+export async function notifyEventCancelled(event: Event, userId?: string): Promise<void> {
   try {
     const title = "❌ Event Cancelled";
     const body = `${event.title} has been cancelled.`;
@@ -374,7 +411,7 @@ export async function notifyEventCancelled(event: Event): Promise<void> {
       eventId: event.id,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, userId);
   } catch (error) {
     console.error("Error sending event cancelled notification:", error);
   }
@@ -383,7 +420,7 @@ export async function notifyEventCancelled(event: Event): Promise<void> {
 /**
  * 7. Low Seats Warning - When remaining seats < 10
  */
-export async function notifyLowSeats(event: Event): Promise<void> {
+export async function notifyLowSeats(event: Event, userId?: string): Promise<void> {
   try {
     const remainingSeats = event.participantLimit - event.participantCount;
     if (remainingSeats >= 10) {
@@ -397,7 +434,7 @@ export async function notifyLowSeats(event: Event): Promise<void> {
       eventId: event.id,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, userId);
   } catch (error) {
     console.error("Error sending low seats notification:", error);
   }
@@ -427,7 +464,8 @@ export async function scheduleEventLiveNotification(event: Event, studentId: str
         eventId: event.id,
         studentId,
       },
-      startDate
+      startDate,
+      studentId
     );
   } catch (error) {
     console.error("Error scheduling event live notification:", error);
@@ -464,7 +502,8 @@ export async function schedulePostEventFeedback(event: Event, studentId: string)
         eventId: event.id,
         studentId,
       },
-      feedbackTime
+      feedbackTime,
+      studentId
     );
   } catch (error) {
     console.error("Error scheduling post-event feedback notification:", error);
@@ -484,7 +523,7 @@ export async function notifyOrganizerLowAttendance(event: Event, organizerId: st
       organizerId,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, organizerId);
   } catch (error) {
     console.error("Error sending organizer low attendance notification:", error);
   }
@@ -503,7 +542,7 @@ export async function notifyOrganizerSoldOut(event: Event, organizerId: string):
       organizerId,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, organizerId);
   } catch (error) {
     console.error("Error sending organizer sold out notification:", error);
   }
@@ -522,7 +561,7 @@ export async function notifyEventSuggestion(event: Event, studentId: string): Pr
       studentId,
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, studentId);
   } catch (error) {
     console.error("Error sending event suggestion notification:", error);
   }
@@ -531,13 +570,13 @@ export async function notifyEventSuggestion(event: Event, studentId: string): Pr
 /**
  * 13. Campus Alert - For important campus-wide announcements
  */
-export async function notifyCampusAlert(title: string, body: string): Promise<void> {
+export async function notifyCampusAlert(title: string, body: string, userId?: string): Promise<void> {
   try {
     const data: NotificationData = {
       type: "campus_alert",
     };
 
-    await sendNotification(title, body, data);
+    await sendNotification(title, body, data, userId);
   } catch (error) {
     console.error("Error sending campus alert notification:", error);
   }

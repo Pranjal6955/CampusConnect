@@ -15,6 +15,7 @@ import AttendanceQRCode from "../../../components/AttendanceQRCode";
 import Badge from "../../../components/Badge";
 import SuccessAnimation from "../../../components/SuccessAnimation";
 import { auth } from "../../../config/firebase";
+import { shareEventLink } from "../../../utils/deeplinks";
 import { Event, getEvent, registerForEvent, unregisterFromEvent } from "../../../utils/events";
 
 export default function EventDetails() {
@@ -493,6 +494,21 @@ export default function EventDetails() {
               </TouchableOpacity>
             )}
           </View>
+          
+          {/* Share Button */}
+          <TouchableOpacity
+            onPress={() => shareEventLink(event.id, event.title)}
+            activeOpacity={0.8}
+            className="py-4 rounded-xl items-center flex-row justify-center mt-3"
+            style={{
+              backgroundColor: isDark ? "rgba(139, 92, 246, 0.2)" : "rgba(139, 92, 246, 0.1)",
+              borderWidth: 1.5,
+              borderColor: "#8b5cf6",
+            }}
+          >
+            <Ionicons name="share-social-outline" size={22} color="#8b5cf6" style={{ marginRight: 10 }} />
+            <Text className={`font-bold text-base ${isDark ? "text-purple-400" : "text-purple-600"}`}>Share Event</Text>
+          </TouchableOpacity>
         </View>
         <View className="h-6" />
       </ScrollView>

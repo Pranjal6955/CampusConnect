@@ -18,7 +18,7 @@ import {
   View,
 } from "react-native";
 import { auth, db } from "../../config/firebase";
-import { getRoleBasedRoute, storeUserRole, storeUserData } from "../../utils/auth";
+import { getRoleBasedRoute, storeUserData, storeUserRole } from "../../utils/auth";
 
 type UserRole = "student" | "organizer";
 
@@ -65,6 +65,41 @@ export default function Signup() {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+
+    // Check if email has a valid domain format (must have at least one dot after @)
+    const parts = email.split("@");
+    if (parts.length !== 2) {
+      return false;
+    }
+
+    const domain = parts[1];
+    // Domain must have at least one dot (e.g., gmail.com, yahoo.co.uk)
+    if (!domain.includes(".")) {
+      return false;
+    }
+
+    // Domain must end with a valid TLD (at least 2 characters)
+    const domainParts = domain.split(".");
+    const tld = domainParts[domainParts.length - 1];
+    if (tld.length < 2) {
+      return false;
+    }
+
+    // Check for valid domain format (no consecutive dots, no dots at start/end)
+    if (domain.startsWith(".") || domain.endsWith(".") || domain.includes("..")) {
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSignup = async () => {
     // Validate based on role
     if (role === "student") {
@@ -78,6 +113,12 @@ export default function Signup() {
         Alert.alert("Error", "Please fill in all fields");
         return;
       }
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      Alert.alert("Error", "Please enter a valid email address (e.g., example@gmail.com, example@yahoo.com)");
+      return;
     }
 
     if (password.length < 6) {
@@ -483,6 +524,32 @@ export default function Signup() {
               </>
             )}
 
+            {/* Organization Name Input - Only for Organizers (First Field) */}
+            {role === "organizer" && (
+              <View className="mb-4">
+                <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+                  Organization Name
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)",
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)",
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 16,
+                    color: isDark ? "#fff" : "#000",
+                  }}
+                  placeholder="Enter your organization name"
+                  placeholderTextColor={isDark ? "#666" : "#999"}
+                  value={organizationName}
+                  onChangeText={setOrganizationName}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
             {/* Email Input */}
             <View className="mb-4">
               <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
@@ -507,91 +574,6 @@ export default function Signup() {
                 autoCapitalize="none"
                 autoComplete="email"
               />
-            </View>
-
-            {/* Role Selection - Hidden but kept for functionality */}
-            <View className="mb-4">
-              <Text className="text-sm font-semibold mb-3" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                I am a
-              </Text>
-              <View className="flex-row gap-4">
-                <TouchableOpacity
-                  onPress={() => {
-                    setRole("student");
-                    setOrganizationName("");
-                    setPhoneNumber("");
-                  }}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 12,
-                    borderWidth: 2,
-                    borderColor: role === "student" ? "#0EA5E9" : (isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"),
-                    backgroundColor: role === "student"
-                      ? "rgba(14, 165, 233, 0.2)"
-                      : (isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)"),
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons
-                    name="school"
-                    size={24}
-                    color={role === "student" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280")}
-                    style={{ marginBottom: 6 }}
-                  />
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      fontWeight: "600",
-                      fontSize: 16,
-                      color: role === "student" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280"),
-                    }}
-                  >
-                    Student
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setRole("organizer");
-                    setStudentId("");
-                    setFirstName("");
-                    setLastName("");
-                    setBirthDate(null);
-                  }}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 12,
-                    borderWidth: 2,
-                    borderColor: role === "organizer" ? "#0EA5E9" : (isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"),
-                    backgroundColor: role === "organizer"
-                      ? "rgba(14, 165, 233, 0.2)"
-                      : (isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)"),
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons
-                    name="briefcase"
-                    size={24}
-                    color={role === "organizer" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280")}
-                    style={{ marginBottom: 6 }}
-                  />
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      fontWeight: "600",
-                      fontSize: 16,
-                      color: role === "organizer" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280"),
-                    }}
-                  >
-                    Organizer
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Student ID Input - Only for Students */}
@@ -646,56 +628,30 @@ export default function Signup() {
               </>
             )}
 
-            {/* Organization Name Input - Only for Organizers */}
+            {/* Phone Number Input - Only for Organizers */}
             {role === "organizer" && (
-              <>
-                <View className="mb-4">
-                  <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                    Organization Name
-                  </Text>
-                  <TextInput
-                    style={{
-                      backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)",
-                      borderWidth: 1,
-                      borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)",
-                      borderRadius: 12,
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      fontSize: 16,
-                      color: isDark ? "#fff" : "#000",
-                    }}
-                    placeholder="Enter your organization name"
-                    placeholderTextColor={isDark ? "#666" : "#999"}
-                    value={organizationName}
-                    onChangeText={setOrganizationName}
-                    autoCapitalize="words"
-                  />
-                </View>
-
-                {/* Phone Number Input - Only for Organizers */}
-                <View className="mb-4">
-                  <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
-                    Phone Number
-                  </Text>
-                  <TextInput
-                    style={{
-                      backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)",
-                      borderWidth: 1,
-                      borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)",
-                      borderRadius: 12,
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      fontSize: 16,
-                      color: isDark ? "#fff" : "#000",
-                    }}
-                    placeholder="Enter your phone number"
-                    placeholderTextColor={isDark ? "#666" : "#999"}
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                  />
-                </View>
-              </>
+              <View className="mb-4">
+                <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+                  Phone Number
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)",
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)",
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 16,
+                    color: isDark ? "#fff" : "#000",
+                  }}
+                  placeholder="Enter your phone number"
+                  placeholderTextColor={isDark ? "#666" : "#999"}
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                />
+              </View>
             )}
 
             {/* Set Password Input */}
@@ -782,6 +738,91 @@ export default function Signup() {
                     size={20}
                     color={isDark ? "#9CA3AF" : "#6B7280"}
                   />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Role Selection */}
+            <View className="mb-4">
+              <Text className="text-sm font-semibold mb-3" style={{ color: isDark ? "#9CA3AF" : "#6B7280" }}>
+                I am a
+              </Text>
+              <View className="flex-row gap-4">
+                <TouchableOpacity
+                  onPress={() => {
+                    setRole("student");
+                    setOrganizationName("");
+                    setPhoneNumber("");
+                  }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: role === "student" ? "#0EA5E9" : (isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"),
+                    backgroundColor: role === "student"
+                      ? "rgba(14, 165, 233, 0.2)"
+                      : (isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)"),
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name="school"
+                    size={24}
+                    color={role === "student" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280")}
+                    style={{ marginBottom: 6 }}
+                  />
+                  <Text
+                    style={{
+                      textAlign: "center",
+                      fontWeight: "600",
+                      fontSize: 16,
+                      color: role === "student" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280"),
+                    }}
+                  >
+                    Student
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setRole("organizer");
+                    setStudentId("");
+                    setFirstName("");
+                    setLastName("");
+                    setBirthDate(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: role === "organizer" ? "#0EA5E9" : (isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"),
+                    backgroundColor: role === "organizer"
+                      ? "rgba(14, 165, 233, 0.2)"
+                      : (isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.9)"),
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name="people"
+                    size={24}
+                    color={role === "organizer" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280")}
+                    style={{ marginBottom: 6 }}
+                  />
+                  <Text
+                    style={{
+                      textAlign: "center",
+                      fontWeight: "600",
+                      fontSize: 16,
+                      color: role === "organizer" ? "#0EA5E9" : (isDark ? "#9CA3AF" : "#6B7280"),
+                    }}
+                  >
+                    Organizer
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

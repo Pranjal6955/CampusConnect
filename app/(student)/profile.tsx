@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
 import { clearAuthStorage } from "../../utils/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -18,8 +17,10 @@ import {
 import Badge from "../../components/Badge";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import EditProfileModal from "../../components/EditProfileModal";
-import { auth, db } from "../../config/firebase";
-import { UpdateUserData, updateUserProfile } from "../../utils/user";
+import { auth } from "../../config/firebase";
+import { getUserProfile } from "../../utils/user";
+import { cancelAllScheduledNotifications } from "../../utils/notifications";
+import { getNotificationPreference, updateNotificationPreference, UpdateUserData, updateUserProfile } from "../../utils/user";
 
 export default function Profile() {
     const router = useRouter();
@@ -68,6 +69,10 @@ export default function Profile() {
                 if (userDoc.exists()) {
                     const data = userDoc.data();
                     setUserData(data);
+                    
+                    // Load notification preference
+                    const notificationPref = await getNotificationPreference(user.uid);
+                    setNotificationsEnabled(notificationPref);
                 }
             }
         } catch (error) {
@@ -324,7 +329,28 @@ export default function Profile() {
                     rightElement={
                         <Switch
                             value={notificationsEnabled}
-                            onValueChange={setNotificationsEnabled}
+                            onValueChange={async (enabled) => {
+                                if (!auth.currentUser) return;
+                                
+                                try {
+                                    // Update preference in Firestore
+                                    await updateNotificationPreference(auth.currentUser.uid, enabled);
+                                    setNotificationsEnabled(enabled);
+                                    
+                                    // If disabling, cancel all scheduled notifications
+                                    if (!enabled) {
+                                        await cancelAllScheduledNotifications();
+                                        Alert.alert("Notifications Disabled", "All scheduled notifications have been cancelled.");
+                                    } else {
+                                        Alert.alert("Notifications Enabled", "You will now receive event notifications.");
+                                    }
+                                } catch (error) {
+                                    console.error("Error updating notification preference:", error);
+                                    Alert.alert("Error", "Failed to update notification settings");
+                                    // Revert the toggle on error
+                                    setNotificationsEnabled(!enabled);
+                                }
+                            }}
                             trackColor={{ false: "#767577", true: "#0EA5E9" }}
                             thumbColor={notificationsEnabled ? "#fff" : "#f4f3f4"}
                         />

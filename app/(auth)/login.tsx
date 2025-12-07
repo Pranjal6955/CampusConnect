@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useColorScheme } from "nativewind";
 import { useState } from "react";
@@ -18,6 +18,7 @@ import { auth } from "../../config/firebase";
 import { getRoleBasedRoute, getUserRole, storeUserData, storeUserRole } from "../../utils/auth";
 
 export default function Login() {
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -64,13 +65,26 @@ export default function Login() {
         await storeUserData(userDoc.data());
       }
       
-      // Navigate based on role
-      const route = getRoleBasedRoute(role);
-      // Ensure students are redirected to the student section
-      if (role === "student") {
-        router.replace("/(student)/events" as any);
+      // Navigate based on role and eventId (if present from deep link)
+      if (eventId) {
+        // If there's an eventId from deep link, navigate to that event
+        if (role === "student") {
+          router.replace(`/(student)/events/${eventId}` as any);
+        } else if (role === "organizer") {
+          router.replace(`/(organizer)/events/${eventId}` as any);
+        } else {
+          const route = getRoleBasedRoute(role);
+          router.replace(route as any);
+        }
       } else {
-        router.replace(route as any);
+        // Normal navigation based on role
+        const route = getRoleBasedRoute(role);
+        // Ensure students are redirected to the student section
+        if (role === "student") {
+          router.replace("/(student)/events" as any);
+        } else {
+          router.replace(route as any);
+        }
       }
     } catch (error: any) {
       const errorMessage = error?.message || error?.toString() || "An error occurred during login";

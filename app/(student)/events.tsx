@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { router, useFocusEffect } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
 import { useColorScheme } from "nativewind";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -16,7 +15,7 @@ import {
   View
 } from "react-native";
 import AttendanceQRCode from "../../components/AttendanceQRCode";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import {
   checkAndSuggestEvents,
   checkUpcomingEvents,
@@ -24,6 +23,7 @@ import {
   getAllEvents,
   isAttendanceMarked,
 } from "../../utils/events";
+import { getUserProfile } from "../../utils/user";
 
 export default function Events() {
   const { colorScheme } = useColorScheme();
@@ -261,9 +261,9 @@ export default function Events() {
     try {
       const user = auth.currentUser;
       if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserData(userDoc.data());
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          setUserData(profile);
         }
       }
     } catch (error) {
