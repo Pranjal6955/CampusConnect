@@ -175,22 +175,22 @@ export async function getOrganizerEvents(organizerId: string): Promise<Event[]> 
   return fetchWithCache(
     `organizer-events-${organizerId}`,
     async () => {
-      const q = query(collection(db, "events"), where("organizerId", "==", organizerId));
-      const querySnapshot = await getDocs(q);
-      const events: Event[] = [];
+    const q = query(collection(db, "events"), where("organizerId", "==", organizerId));
+    const querySnapshot = await getDocs(q);
+    const events: Event[] = [];
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        events.push({
-          id: doc.id,
-          ...data,
-          participants: data.participants || [], // Ensure participants is always an array
-        } as Event);
-      });
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      events.push({
+        id: doc.id,
+        ...data,
+        participants: data.participants || [], // Ensure participants is always an array
+      } as Event);
+    });
 
-      return events.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+    return events.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
     },
     (events) => setCachedOrganizerEvents(organizerId, events),
     () => getCachedOrganizerEvents(organizerId)
@@ -203,16 +203,16 @@ export async function getEvent(eventId: string): Promise<Event | null> {
     return await fetchWithCache(
       `event-${eventId}`,
       async () => {
-        const eventDoc = await getDoc(doc(db, "events", eventId));
-        if (eventDoc.exists()) {
-          const data = eventDoc.data();
-          return {
-            id: eventDoc.id,
-            ...data,
-            participants: data.participants || [], // Ensure participants is always an array
-          } as Event;
-        }
-        return null;
+    const eventDoc = await getDoc(doc(db, "events", eventId));
+    if (eventDoc.exists()) {
+      const data = eventDoc.data();
+      return {
+        id: eventDoc.id,
+        ...data,
+        participants: data.participants || [], // Ensure participants is always an array
+      } as Event;
+    }
+    return null;
       },
       async (event) => {
         if (event) {
@@ -352,21 +352,21 @@ export async function getAllEvents(): Promise<Event[]> {
   return fetchWithCache(
     "all-events",
     async () => {
-      const querySnapshot = await getDocs(collection(db, "events"));
-      const events: Event[] = [];
+    const querySnapshot = await getDocs(collection(db, "events"));
+    const events: Event[] = [];
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        events.push({
-          id: doc.id,
-          ...data,
-          participants: data.participants || [], // Ensure participants is always an array
-        } as Event);
-      });
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      events.push({
+        id: doc.id,
+        ...data,
+        participants: data.participants || [], // Ensure participants is always an array
+      } as Event);
+    });
 
-      return events.sort((a, b) => 
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-      );
+    return events.sort((a, b) => 
+      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
     },
     (events) => setCachedEvents(events),
     () => getCachedEvents()
@@ -500,25 +500,25 @@ export async function getStudentEvents(studentId: string): Promise<Event[]> {
   return fetchWithCache(
     `student-events-${studentId}`,
     async () => {
-      const querySnapshot = await getDocs(collection(db, "events"));
-      const events: Event[] = [];
+    const querySnapshot = await getDocs(collection(db, "events"));
+    const events: Event[] = [];
 
-      querySnapshot.forEach((doc) => {
-        const eventData = doc.data() as Event;
-        const participants = eventData.participants || []; // Ensure participants is always an array
-        if (participants.includes(studentId)) {
-          const { id: _, ...eventDataWithoutId } = eventData;
-          events.push({
-            id: doc.id,
-            ...eventDataWithoutId,
-            participants: participants, // Ensure participants is set
-          } as Event);
-        }
-      });
+    querySnapshot.forEach((doc) => {
+      const eventData = doc.data() as Event;
+      const participants = eventData.participants || []; // Ensure participants is always an array
+      if (participants.includes(studentId)) {
+        const { id: _, ...eventDataWithoutId } = eventData;
+        events.push({
+          id: doc.id,
+          ...eventDataWithoutId,
+          participants: participants, // Ensure participants is set
+        } as Event);
+      }
+    });
 
-      return events.sort((a, b) => 
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-      );
+    return events.sort((a, b) => 
+      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
     },
     (events) => setCachedStudentEvents(studentId, events),
     () => getCachedStudentEvents(studentId)
@@ -582,21 +582,21 @@ export async function getEventAttendance(eventId: string): Promise<Array<{ stude
   return fetchWithCache(
     `attendance-${eventId}`,
     async () => {
-      const q = query(collection(db, "attendance"), where("eventId", "==", eventId));
-      const querySnapshot = await getDocs(q);
-      const attendance: Array<{ studentId: string; markedAt: string }> = [];
+    const q = query(collection(db, "attendance"), where("eventId", "==", eventId));
+    const querySnapshot = await getDocs(q);
+    const attendance: Array<{ studentId: string; markedAt: string }> = [];
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        attendance.push({
-          studentId: data.studentId,
-          markedAt: data.markedAt,
-        });
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      attendance.push({
+        studentId: data.studentId,
+        markedAt: data.markedAt,
       });
+    });
 
-      return attendance.sort((a, b) => 
-        new Date(b.markedAt).getTime() - new Date(a.markedAt).getTime()
-      );
+    return attendance.sort((a, b) => 
+      new Date(b.markedAt).getTime() - new Date(a.markedAt).getTime()
+    );
     },
     (attendance) => setCachedAttendance(eventId, attendance),
     () => getCachedAttendance(eventId)

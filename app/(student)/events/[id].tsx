@@ -289,7 +289,7 @@ export default function EventDetails() {
                 <Ionicons name="person-add" size={24} color="#0EA5E9" />
               </View>
               <Text className={`text-3xl font-extrabold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>{event.participantCount}</Text>
-              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Going</Text>
+              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Attending</Text>
             </View>
             <View className={`flex-1 p-5 rounded-xl items-center justify-center ${isDark ? "bg-gray-900" : "bg-white"}`}
               style={{
@@ -306,7 +306,7 @@ export default function EventDetails() {
                 <Ionicons name="person-circle-outline" size={24} color={isDark ? "#9ca3af" : "#6b7280"} />
               </View>
               <Text className={`text-3xl font-extrabold mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>{event.participantLimit}</Text>
-              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Limit</Text>
+              <Text className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider`}>Maximum</Text>
             </View>
           </View>
 
@@ -344,50 +344,47 @@ export default function EventDetails() {
             <View className="p-5">
               <Text className={`text-lg font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>Event Details</Text>
               
-              {/* Start Date */}
+              {/* Start Date & Time */}
               <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
-                <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-blue-50"}`}>
-                  <Ionicons name="calendar-number" size={22} color="#3b82f6" />
+                <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-emerald-900/30" : "bg-emerald-50"}`}>
+                  <Ionicons name="hourglass-outline" size={22} color="#10b981" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Start Date</Text>
-                  <Text className={`text-base font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                  <Text className={`text-base font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDateShort(event.startDate)}
                   </Text>
+                  {!event.fullDayEvent && event.startTime && (
+                    <View className="flex-row items-center mt-1">
+                      <Ionicons name="time-outline" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                      <Text className={`text-sm ml-1.5 font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+                        {formatTimeTo12Hour(event.startTime)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
-              {/* End Date */}
+              {/* End Date & Time */}
               <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
-                <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-purple-50"}`}>
-                  <Ionicons name="calendar-number-outline" size={22} color="#a855f7" />
+                <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-purple-900/30" : "bg-purple-50"}`}>
+                  <Ionicons name="flag" size={22} color="#a855f7" />
                 </View>
                 <View className="flex-1">
-                  <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>End Date</Text>
-                  <Text className={`text-base font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  <Text className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                  <Text className={`text-base font-bold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
                     {formatDateShort(event.endDate)}
                   </Text>
+                  {!event.fullDayEvent && event.endTime && (
+                    <View className="flex-row items-center mt-1">
+                      <Ionicons name="time-outline" size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+                      <Text className={`text-sm ml-1.5 font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+                        {formatTimeTo12Hour(event.endTime)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
-
-              {/* Time */}
-              {!event.fullDayEvent && (
-                <View className="flex-row items-start mb-4 pb-4" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? "#374151" : "#e5e7eb" }}>
-                  <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isDark ? "bg-gray-800" : "bg-orange-50"}`}>
-                    <Ionicons name="alarm-outline" size={22} color="#f97316" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`text-xs font-semibold mb-1 uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-500"}`}>Time</Text>
-                    <Text className={`text-base font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {event.startTime && event.endTime 
-                        ? `${formatTimeTo12Hour(event.startTime)} - ${formatTimeTo12Hour(event.endTime)}`
-                        : event.startTime 
-                        ? formatTimeTo12Hour(event.startTime)
-                        : ""}
-                    </Text>
-                  </View>
-                </View>
-              )}
 
               {/* Venue */}
               <View className="flex-row items-start">

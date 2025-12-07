@@ -44,7 +44,7 @@ export default function Events() {
   const studentId = auth.currentUser?.uid || "";
 
   const categories = ["All", "Club Event", "Seminar", "Sports", "Cultural", "Workshop", "Fest", "Hackathon"];
-  const statusFilters = ["All", "Upcoming", "Completed", "Closed"];
+  const statusFilters = ["All", "Upcoming", "Ongoing", "Completed"];
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -195,6 +195,52 @@ export default function Events() {
     return diffDays;
   };
 
+  // Get time remaining until event starts (days, hours, minutes)
+  const getTimeRemaining = (event: Event): string => {
+    const now = new Date();
+    const startDate = new Date(event.startDate);
+    
+    // Set the start time if event has a specific time
+    if (event.startTime && !event.fullDayEvent) {
+      const [hours, minutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
+    } else {
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    const diffMs = startDate.getTime() - now.getTime();
+    
+    // If event has already started or ended
+    if (diffMs <= 0) {
+      if (isEventOngoing(event)) {
+        return "Ongoing";
+      }
+      return "Ended";
+    }
+    
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    const remainingHours = diffHours % 24;
+    const remainingMins = diffMins % 60;
+    
+    // Format: "X days, Y hours, Z min left"
+    const parts: string[] = [];
+    
+    if (diffDays > 0) {
+      parts.push(`${diffDays} ${diffDays === 1 ? "day" : "days"}`);
+    }
+    if (remainingHours > 0) {
+      parts.push(`${remainingHours} ${remainingHours === 1 ? "hour" : "hours"}`);
+    }
+    if (remainingMins > 0 || parts.length === 0) {
+      parts.push(`${remainingMins} ${remainingMins === 1 ? "min" : "min"}`);
+    }
+    
+    return parts.join(", ") + " left";
+  };
+
   // Get status text for event
   const getEventStatusText = (event: Event): string => {
     if (isEventOngoing(event)) {
@@ -247,10 +293,10 @@ export default function Events() {
     if (selectedStatus !== "All") {
       if (selectedStatus === "Upcoming") {
         filtered = filtered.filter(event => isEventUpcoming(event));
+      } else if (selectedStatus === "Ongoing") {
+        filtered = filtered.filter(event => isEventOngoing(event));
       } else if (selectedStatus === "Completed") {
         filtered = filtered.filter(event => isEventCompleted(event));
-      } else if (selectedStatus === "Closed") {
-        filtered = filtered.filter(event => isEventEnded(event));
       }
     }
 
@@ -589,7 +635,7 @@ export default function Events() {
                                 }}
                               >
                                 <Text className={`text-xs font-semibold ${isDark ? "text-green-300" : "text-green-600"}`}>
-                                  JOINED
+                                  Joined
                                 </Text>
                               </View>
                             )}
@@ -762,10 +808,10 @@ export default function Events() {
                 switch (status) {
                   case "Upcoming":
                     return "#eab308"; // Yellow
-                  case "Completed":
+                  case "Ongoing":
                     return "#22c55e"; // Green
-                  case "Closed":
-                    return "#ef4444"; // Red
+                  case "Completed":
+                    return "#6b7280"; // Gray
                   default:
                     return "#0EA5E9"; // Blue for "All"
                 }
@@ -858,8 +904,9 @@ export default function Events() {
           ) : (
             filteredEvents.map((event) => {
               const ended = isEventEnded(event);
-              const timeElapsed = getTimeElapsed(event.startDate, event.startTime);
-              const dateTimeString = `${formatDateFull(event.startDate)}${!event.fullDayEvent && event.startTime ? `, ${formatTimeTo12Hour(event.startTime)}` : ""}`;
+              const timeRemaining = getTimeRemaining(event);
+              const startDateTime = `${formatDateFull(event.startDate)}${!event.fullDayEvent && event.startTime ? `, ${formatTimeTo12Hour(event.startTime)}` : ""}`;
+              const endDateTime = `${formatDateFull(event.endDate)}${!event.fullDayEvent && event.endTime ? `, ${formatTimeTo12Hour(event.endTime)}` : ""}`;
               
               return (
                 <TouchableOpacity
@@ -888,30 +935,46 @@ export default function Events() {
                         <Ionicons name="image-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
                       </View>
                     )}
-                    {/* Time Elapsed Badge */}
+                    {/* Time Remaining Badge */}
                     <View className="absolute top-3 right-3">
                       <View
                         className="px-2.5 py-1 rounded-lg"
                         style={{
-                          backgroundColor: "rgba(0, 0, 0, 0.6)",
+                          backgroundColor: isEventOngoing(event) 
+                            ? "rgba(34, 197, 94, 0.9)" 
+                            : ended 
+                            ? "rgba(239, 68, 68, 0.9)" 
+                            : "rgba(0, 0, 0, 0.6)",
                           backdropFilter: "blur(10px)",
                         }}
                       >
                         <Text className="text-xs font-medium text-white">
-                          {timeElapsed}
+                          {timeRemaining}
                         </Text>
                       </View>
                     </View>
                   </View>
 
                   <View className="p-5">
-                    {/* Title */}
-                    <Text
-                      numberOfLines={2}
-                      className={`text-xl font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}
-                    >
-                      {event.title}
-                    </Text>
+                    {/* Title and Category */}
+                    <View className="flex-row items-start justify-between mb-2">
+                      <Text
+                        numberOfLines={2}
+                        className={`text-xl font-bold flex-1 mr-2 ${isDark ? "text-white" : "text-gray-900"}`}
+                      >
+                        {event.title}
+                      </Text>
+                      <View
+                        className="px-2.5 py-1 rounded-full flex-shrink-0"
+                        style={{
+                          backgroundColor: isDark ? "rgba(251, 191, 36, 0.2)" : "rgba(251, 191, 36, 0.15)",
+                        }}
+                      >
+                        <Text className={`text-xs font-semibold ${isDark ? "text-yellow-300" : "text-yellow-600"}`}>
+                          {event.category}
+                        </Text>
+                      </View>
+                    </View>
 
                     {/* Description */}
                     {event.description && (
@@ -923,15 +986,59 @@ export default function Events() {
                       </Text>
                     )}
 
-                    {/* Date & Time */}
-                    <View className="flex-row items-center mb-3">
-                      <Ionicons name="calendar-outline" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
-                      <Text
-                        numberOfLines={1}
-                        className={`text-sm ml-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-                      >
-                        {dateTimeString}
-                      </Text>
+                    {/* Date & Time Section */}
+                    <View className="mb-3">
+                      {/* Start Date & Time */}
+                      <View className="flex-row items-center mb-2">
+                        <View className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? "bg-emerald-900/30" : "bg-emerald-50"}`}>
+                          <Ionicons name="hourglass-outline" size={12} color="#10b981" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                          <View className="flex-row items-center flex-wrap">
+                            <Text
+                              numberOfLines={1}
+                              className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                            >
+                              {formatDateFull(event.startDate)}
+                            </Text>
+                            {!event.fullDayEvent && event.startTime && (
+                              <View className="flex-row items-center ml-1">
+                                <Ionicons name="time-outline" size={12} color={isDark ? "#9ca3af" : "#6b7280"} style={{ marginLeft: 4, marginRight: 2 }} />
+                                <Text className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+                                  {formatTimeTo12Hour(event.startTime)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* End Date & Time */}
+                      <View className="flex-row items-center">
+                        <View className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? "bg-purple-900/30" : "bg-purple-50"}`}>
+                          <Ionicons name="flag" size={12} color="#a855f7" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                          <View className="flex-row items-center flex-wrap">
+                            <Text
+                              numberOfLines={1}
+                              className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                            >
+                              {formatDateFull(event.endDate)}
+                            </Text>
+                            {!event.fullDayEvent && event.endTime && (
+                              <View className="flex-row items-center ml-1">
+                                <Ionicons name="time-outline" size={12} color={isDark ? "#9ca3af" : "#6b7280"} style={{ marginLeft: 4, marginRight: 2 }} />
+                                <Text className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+                                  {formatTimeTo12Hour(event.endTime)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
                     </View>
 
                     {/* Location */}
