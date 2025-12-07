@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import Badge from "../../components/Badge";
 import CreateEventModal from "../../components/CreateEventModal";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import ViewEventModal from "../../components/ViewEventModal";
@@ -21,12 +20,12 @@ import { auth } from "../../config/firebase";
 import {
   Event,
   EventFormData,
+  checkAndNotifyLowAttendance,
   createEvent,
   deleteEvent,
   getOrganizerEvents,
   markAttendance,
   updateEvent,
-  checkAndNotifyLowAttendance,
 } from "../../utils/events";
 import { getUserProfile } from "../../utils/user";
 
@@ -120,6 +119,93 @@ export default function Events() {
     if (diffHours > 0) return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
     if (diffMins > 0) return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
     return "Just now";
+  };
+
+  // Get event timing badge text (shows time until/from event start/end)
+  const getEventTimingBadge = (event: Event): string => {
+    const now = new Date();
+    
+    // Calculate start date/time
+    const startDate = new Date(event.startDate);
+    if (event.startTime && !event.fullDayEvent) {
+      const [hours, minutes] = event.startTime.split(":").map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
+    } else {
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    // Calculate end date/time
+    const endDate = new Date(event.endDate);
+    if (event.endTime && !event.fullDayEvent) {
+      const [endHours, endMinutes] = event.endTime.split(":").map(Number);
+      endDate.setHours(endHours, endMinutes, 0, 0);
+    } else {
+      endDate.setHours(23, 59, 59, 999);
+    }
+    
+    // Event hasn't started yet
+    if (now < startDate) {
+      const diffMs = startDate.getTime() - now.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffDays > 0) {
+        return `Starts in ${diffDays} ${diffDays === 1 ? "day" : "days"}`;
+      } else if (diffHours > 0) {
+        const remainingMins = diffMins % 60;
+        if (remainingMins > 0) {
+          return `Starts in ${diffHours}h ${remainingMins}m`;
+        }
+        return `Starts in ${diffHours} ${diffHours === 1 ? "hour" : "hours"}`;
+      } else if (diffMins > 0) {
+        return `Starts in ${diffMins} ${diffMins === 1 ? "minute" : "minutes"}`;
+      } else {
+        return "Starting now";
+      }
+    }
+    // Event is ongoing (started but not ended)
+    else if (now >= startDate && now < endDate) {
+      const diffMs = endDate.getTime() - now.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffDays > 0) {
+        return `Live • Ends in ${diffDays} ${diffDays === 1 ? "day" : "days"}`;
+      } else if (diffHours > 0) {
+        const remainingMins = diffMins % 60;
+        if (remainingMins > 0) {
+          return `Live • Ends in ${diffHours}h ${remainingMins}m`;
+        }
+        return `Live • Ends in ${diffHours} ${diffHours === 1 ? "hour" : "hours"}`;
+      } else if (diffMins > 0) {
+        return `Live • Ends in ${diffMins} ${diffMins === 1 ? "minute" : "minutes"}`;
+      } else {
+        return "Live • Ending soon";
+      }
+    }
+    // Event has ended
+    else {
+      const diffMs = now.getTime() - endDate.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffDays > 0) {
+        return `Ended ${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+      } else if (diffHours > 0) {
+        const remainingMins = diffMins % 60;
+        if (remainingMins > 0) {
+          return `Ended ${diffHours}h ${remainingMins}m ago`;
+        }
+        return `Ended ${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+      } else if (diffMins > 0) {
+        return `Ended ${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
+      } else {
+        return "Just ended";
+      }
+    }
   };
 
   // Check if event has ended
@@ -338,6 +424,11 @@ export default function Events() {
     setShowQRScanner(true);
   };
 
+  const handleOpenGeneralScanner = () => {
+    setScanningEventId(null);
+    setShowQRScanner(true);
+  };
+
   const handleQRScan = async (data: { eventId: string; studentId: string }) => {
     try {
       await markAttendance(data.eventId, data.studentId);
@@ -380,10 +471,10 @@ export default function Events() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={openCreateModal}
+              onPress={handleOpenGeneralScanner}
               className={`w-10 h-10 rounded-full items-center justify-center ${isDark ? "bg-gray-900" : "bg-gray-100"}`}
             >
-              <Ionicons name="add" size={20} color="#0EA5E9" />
+              <Ionicons name="qr-code-outline" size={20} color="#22c55e" />
             </TouchableOpacity>
           </View>
 
@@ -618,8 +709,16 @@ export default function Events() {
           ) : (
             filteredEvents.map((event) => {
               const ended = isEventEnded(event);
-              const timeElapsed = getTimeElapsed(event.startDate, event.startTime);
-              const dateTimeString = `${formatDateFull(event.startDate)}${!event.fullDayEvent && event.startTime ? `, ${formatTimeTo12Hour(event.startTime)}` : ""}`;
+              const upcoming = isEventUpcoming(event);
+              const eventTiming = getEventTimingBadge(event);
+              
+              // Determine badge color based on event status
+              let badgeColor = "rgba(14, 165, 233, 0.8)"; // Blue for upcoming
+              if (ended) {
+                badgeColor = "rgba(239, 68, 68, 0.8)"; // Red for ended
+              } else if (!upcoming) {
+                badgeColor = "rgba(34, 197, 94, 0.8)"; // Green for live/ongoing
+              }
               
               return (
                 <TouchableOpacity
@@ -648,17 +747,17 @@ export default function Events() {
                         <Ionicons name="image-outline" size={40} color={isDark ? "#4b5563" : "#9ca3af"} />
                       </View>
                     )}
-                    {/* Time Elapsed Badge */}
+                    {/* Event Timing Badge */}
                     <View className="absolute top-3 right-3">
                       <View
                         className="px-2.5 py-1 rounded-lg"
                         style={{
-                          backgroundColor: "rgba(0, 0, 0, 0.6)",
+                          backgroundColor: badgeColor,
                           backdropFilter: "blur(10px)",
                         }}
                       >
                         <Text className="text-xs font-medium text-white">
-                          {timeElapsed}
+                          {eventTiming}
                         </Text>
                       </View>
                     </View>
@@ -674,7 +773,7 @@ export default function Events() {
                         backdropFilter: "blur(10px)",
                       }}
                     >
-                      <Ionicons name="create-outline" size={18} color="#fff" />
+                      <Ionicons name="pencil-outline" size={18} color="#fff" />
                     </TouchableOpacity>
                   </View>
 
@@ -697,19 +796,43 @@ export default function Events() {
                       </Text>
                     )}
 
-                    {/* Date & Time */}
-                    <View className="flex-row items-center mb-3">
-                      <Ionicons name="calendar-outline" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
-                      <Text
-                        numberOfLines={1}
-                        className={`text-sm ml-2 flex-1 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-                      >
-                        {dateTimeString}
-                      </Text>
+                    {/* Date & Time Section */}
+                    <View className="mb-3">
+                      {/* Start Date */}
+                      <View className="flex-row items-center mb-2">
+                        <View className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? "bg-emerald-900/30" : "bg-emerald-50"}`}>
+                          <Ionicons name="hourglass-outline" size={12} color="#10b981" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
+                          <Text
+                            numberOfLines={1}
+                            className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                          >
+                            {formatDateFull(event.startDate)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* End Date */}
+                      <View className="flex-row items-center">
+                        <View className={`w-6 h-6 rounded-full items-center justify-center mr-2 ${isDark ? "bg-purple-900/30" : "bg-purple-50"}`}>
+                          <Ionicons name="flag" size={12} color="#a855f7" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
+                          <Text
+                            numberOfLines={1}
+                            className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                          >
+                            {formatDateFull(event.endDate)}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
 
                     {/* Location */}
-                    <View className="flex-row items-center mb-4">
+                    <View className="flex-row items-center mb-3">
                       <Ionicons name="location-outline" size={16} color={isDark ? "#9ca3af" : "#6b7280"} />
                       <Text
                         numberOfLines={1}
@@ -718,6 +841,29 @@ export default function Events() {
                         {event.venue}
                       </Text>
                     </View>
+
+                    {/* Custom Labels */}
+                    {(event as any).customLabels && (
+                      <View className="flex-row flex-wrap mb-4" style={{ gap: 6 }}>
+                        {((event as any).customLabels as string).split(",").map((label: string, index: number) => {
+                          const trimmedLabel = label.trim();
+                          if (!trimmedLabel) return null;
+                          return (
+                            <View
+                              key={index}
+                              className="px-2.5 py-1 rounded-full"
+                              style={{
+                                backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                              }}
+                            >
+                              <Text className={`text-xs font-semibold ${isDark ? "text-blue-300" : "text-blue-600"}`}>
+                                {trimmedLabel}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
 
                     {/* Attendees and Status Row */}
                     <View className="flex-row items-center justify-between">

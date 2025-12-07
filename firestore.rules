@@ -58,6 +58,36 @@ service cloud.firestore {
                             && resource.data.organizerId == request.auth.uid;
     }
     
+    // Feedback collection
+    match /feedback/{feedbackId} {
+      // Students can read their own feedback
+      // Organizers can read feedback for their events
+      allow read: if request.auth != null && (
+        resource.data.studentId == request.auth.uid ||
+        // Organizer can read if they own the event
+        // We'll need to check the event's organizerId
+        true // Allow read for now, we'll filter in the app
+      );
+      
+      // Students can create feedback for events they attended
+      allow create: if request.auth != null 
+                    && request.resource.data.studentId == request.auth.uid
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5
+                    && request.resource.data.comment is string;
+      
+      // Students can update their own feedback
+      allow update: if request.auth != null 
+                    && resource.data.studentId == request.auth.uid
+                    && request.resource.data.studentId == resource.data.studentId
+                    && request.resource.data.eventId == resource.data.eventId;
+      
+      // Students can delete their own feedback
+      allow delete: if request.auth != null 
+                    && resource.data.studentId == request.auth.uid;
+    }
+    
     // Default: deny all access
     match /{document=**} {
       allow read, write: if false;

@@ -13,10 +13,12 @@ import {
 } from "react-native";
 import AttendanceQRCode from "../../../components/AttendanceQRCode";
 import Badge from "../../../components/Badge";
+import FeedbackModal from "../../../components/FeedbackModal";
 import SuccessAnimation from "../../../components/SuccessAnimation";
 import { auth } from "../../../config/firebase";
 import { shareEventLink } from "../../../utils/deeplinks";
 import { Event, getEvent, registerForEvent, unregisterFromEvent } from "../../../utils/events";
+import { canSubmitFeedback, getFeedbackByStudent } from "../../../utils/feedback";
 
 export default function EventDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +29,10 @@ export default function EventDetails() {
   const [registering, setRegistering] = useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [hasSubmittedFeedback, setHasSubmittedFeedback] = useState(false);
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number; label: string } | null>(null);
 
   const studentId = auth.currentUser?.uid || "";
 
@@ -41,6 +47,26 @@ export default function EventDetails() {
       if (!id) return;
       const eventData = await getEvent(id);
       setEvent(eventData);
+      
+      // Check feedback eligibility if event has ended
+      if (eventData && studentId) {
+        const endDate = new Date(eventData.endDate);
+        if (eventData.endTime && !eventData.fullDayEvent) {
+          const [hours, minutes] = eventData.endTime.split(":").map(Number);
+          endDate.setHours(hours, minutes, 0, 0);
+        } else {
+          endDate.setHours(23, 59, 59, 999);
+        }
+        
+        if (new Date() > endDate) {
+          const eligibility = await canSubmitFeedback(id, studentId);
+          setCanSubmit(eligibility.canSubmit);
+          
+          // Check if feedback already submitted
+          const existingFeedback = await getFeedbackByStudent(id, studentId);
+          setHasSubmittedFeedback(!!existingFeedback);
+        }
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load event details");
       console.error(error);
@@ -116,6 +142,69 @@ export default function EventDetails() {
     
     return now >= startDate && now <= endDate;
   };
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!event) return;
+
+    const updateCountdown = () => {
+      const now = new Date();
+      
+      // Calculate start date/time
+      const startDate = new Date(event.startDate);
+      if (event.startTime && !event.fullDayEvent) {
+        const [hours, minutes] = event.startTime.split(":").map(Number);
+        startDate.setHours(hours, minutes, 0, 0);
+      } else {
+        startDate.setHours(0, 0, 0, 0);
+      }
+      
+      // Calculate end date/time
+      const endDate = new Date(event.endDate);
+      if (event.endTime && !event.fullDayEvent) {
+        const [endHours, endMinutes] = event.endTime.split(":").map(Number);
+        endDate.setHours(endHours, endMinutes, 0, 0);
+      } else {
+        endDate.setHours(23, 59, 59, 999);
+      }
+
+      let targetDate: Date;
+      let label: string;
+
+      if (now < startDate) {
+        // Event hasn't started - countdown to start
+        targetDate = startDate;
+        label = "Starts in";
+      } else if (now >= startDate && now < endDate) {
+        // Event is ongoing - countdown to end
+        targetDate = endDate;
+        label = "Ends in";
+      } else {
+        // Event has ended
+        setCountdown(null);
+        return;
+      }
+
+      const diff = targetDate.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setCountdown(null);
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setCountdown({ days, hours, minutes, seconds, label });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [event]);
 
   const handleRegister = async () => {
     if (!event || !studentId) return;
@@ -240,11 +329,100 @@ export default function EventDetails() {
           </TouchableOpacity>
         </View>
 
+        {/* Countdown Timer */}
+        {countdown && (
+          <View className="px-5 pt-6 pb-4 items-center">
+            <Text className={`text-base font-bold mb-4 uppercase tracking-wider ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+              {countdown.label}
+            </Text>
+            <View className="flex-row items-center justify-center gap-3">
+              {/* Days */}
+              <View className={`items-center ${isDark ? "bg-gray-800" : "bg-white"} rounded-xl p-3`}
+                style={{
+                  minWidth: 70,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text className={`text-3xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  {countdown.days.toString().padStart(2, "0")}
+                </Text>
+                <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Days
+                </Text>
+              </View>
+              
+              {/* Hours */}
+              <View className={`items-center ${isDark ? "bg-gray-800" : "bg-white"} rounded-xl p-3`}
+                style={{
+                  minWidth: 70,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text className={`text-3xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  {countdown.hours.toString().padStart(2, "0")}
+                </Text>
+                <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Hours
+                </Text>
+              </View>
+              
+              {/* Minutes */}
+              <View className={`items-center ${isDark ? "bg-gray-800" : "bg-white"} rounded-xl p-3`}
+                style={{
+                  minWidth: 70,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text className={`text-3xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  {countdown.minutes.toString().padStart(2, "0")}
+                </Text>
+                <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Minutes
+                </Text>
+              </View>
+              
+              {/* Seconds */}
+              <View className={`items-center ${isDark ? "bg-gray-800" : "bg-white"} rounded-xl p-3`}
+                style={{
+                  minWidth: 70,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text className={`text-3xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}>
+                  {countdown.seconds.toString().padStart(2, "0")}
+                </Text>
+                <Text className={`text-xs font-semibold mt-1 uppercase ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Seconds
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Content Body */}
         <View className="px-5 py-6">
           {/* Title & Category */}
           <View className="mb-6">
-            <View className="flex-row items-center flex-wrap mb-3">
+            <Text className={`text-3xl font-extrabold leading-tight mb-3 ${isDark ? "text-white" : "text-gray-900"}`}>
+              {event.title}
+            </Text>
+            <View className="flex-row items-center flex-wrap">
               <View className="mr-2 mb-1">
                 <Badge
                   label={event.category}
@@ -253,6 +431,25 @@ export default function EventDetails() {
                   icon="none"
                 />
               </View>
+              {(event as any).customLabels && 
+                ((event as any).customLabels as string).split(",").map((label: string, index: number) => {
+                  const trimmedLabel = label.trim();
+                  if (!trimmedLabel) return null;
+                  return (
+                    <View
+                      key={index}
+                      className="mr-2 mb-1 px-2.5 py-1 rounded-full"
+                      style={{
+                        backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                      }}
+                    >
+                      <Text className={`text-xs font-semibold ${isDark ? "text-blue-300" : "text-blue-600"}`}>
+                        {trimmedLabel}
+                      </Text>
+                    </View>
+                  );
+                })
+              }
               {registered && (
                 <Badge
                   label="Registered"
@@ -267,9 +464,6 @@ export default function EventDetails() {
                 </View>
               )}
             </View>
-            <Text className={`text-3xl font-extrabold leading-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-              {event.title}
-            </Text>
           </View>
 
           {/* Stats Row */}
@@ -404,6 +598,36 @@ export default function EventDetails() {
           {/* Action Buttons */}
           <View className="mb-6">
             {ended ? (
+              <>
+                {canSubmit && !hasSubmittedFeedback ? (
+                  <TouchableOpacity
+                    onPress={() => setShowFeedbackModal(true)}
+                    activeOpacity={0.8}
+                    className="py-4 rounded-xl items-center flex-row justify-center"
+                    style={{
+                      backgroundColor: "#0EA5E9",
+                      shadowColor: "#0EA5E9",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Ionicons name="chatbubbles-outline" size={22} color="#fff" style={{ marginRight: 10 }} />
+                    <Text className="text-white font-bold text-base">Provide Feedback</Text>
+                  </TouchableOpacity>
+                ) : hasSubmittedFeedback ? (
+                  <View className="py-4 rounded-xl items-center flex-row justify-center"
+                    style={{
+                      backgroundColor: isDark ? "rgba(34, 197, 94, 0.2)" : "rgba(34, 197, 94, 0.1)",
+                      borderWidth: 1.5,
+                      borderColor: "#22c55e",
+                    }}
+                  >
+                    <Ionicons name="checkmark-circle" size={22} color="#22c55e" style={{ marginRight: 10 }} />
+                    <Text className="text-green-500 font-bold text-base">Feedback Submitted</Text>
+                  </View>
+                ) : (
               <View className="py-4 rounded-xl items-center flex-row justify-center"
                 style={{
                   backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
@@ -414,6 +638,8 @@ export default function EventDetails() {
             <Ionicons name="close-circle" size={22} color="#ef4444" style={{ marginRight: 10 }} />
             <Text className="text-red-500 font-bold text-base">Event Ended</Text>
           </View>
+                )}
+              </>
         ) : ongoing ? (
           <View className="py-4 rounded-xl items-center flex-row justify-center"
             style={{
@@ -526,6 +752,20 @@ export default function EventDetails() {
           eventId={event.id}
           studentId={studentId}
           eventTitle={event.title}
+        />
+      )}
+
+      {/* Feedback Modal */}
+      {event && (
+        <FeedbackModal
+          visible={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          eventId={event.id}
+          studentId={studentId}
+          onSubmitSuccess={() => {
+            setHasSubmittedFeedback(true);
+            setCanSubmit(false);
+          }}
         />
       )}
     </View>

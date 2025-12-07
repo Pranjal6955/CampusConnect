@@ -47,7 +47,8 @@ export type EventCategory = "Club Event" | "Seminar" | "Sports" | "Cultural" | "
 export interface Event {
   id: string;
   organizerId: string;
-  imageUrl: string;
+  imageUrl?: string; // Legacy single image (for backward compatibility)
+  imageUrls?: string[]; // New multiple images array
   title: string;
   description: string;
   startDate: string;
@@ -58,6 +59,7 @@ export interface Event {
   type: EventType;
   category: EventCategory;
   fullDayEvent: boolean;
+  customLabels?: string; // Custom labels/tags for the event
   participantLimit: number;
   participantCount: number;
   participants: string[];
@@ -66,7 +68,8 @@ export interface Event {
 }
 
 export interface EventFormData {
-  imageUri?: string;
+  imageUri?: string; // Legacy single image (for backward compatibility)
+  imageUris?: string[]; // New multiple images array
   title: string;
   description: string;
   startDate: Date;
@@ -77,6 +80,7 @@ export interface EventFormData {
   type: EventType;
   category: EventCategory;
   fullDayEvent: boolean;
+  customLabels?: string; // Custom labels/tags for the event
   participantLimit: number;
 }
 
@@ -88,6 +92,14 @@ async function uploadImage(uri: string, eventId: string): Promise<string> {
   return uploadImageWithPath(uri, "events", eventId);
 }
 
+// Upload multiple images to Cloudinary
+async function uploadImages(uris: string[], eventId: string): Promise<string[]> {
+  const uploadPromises = uris.map((uri, index) => 
+    uploadImageWithPath(uri, "events", `${eventId}_${index}`)
+  );
+  return Promise.all(uploadPromises);
+}
+
 // Delete image from Cloudinary
 async function deleteImage(imageUrl: string): Promise<void> {
   try {
@@ -96,6 +108,14 @@ async function deleteImage(imageUrl: string): Promise<void> {
     console.error("Error deleting image:", error);
     // Don't throw - image deletion is not critical
   }
+}
+
+// Get primary image URL from event (supports both old and new format)
+export function getEventPrimaryImage(event: Event): string | undefined {
+  if (event.imageUrls && event.imageUrls.length > 0) {
+    return event.imageUrls[0];
+  }
+  return event.imageUrl;
 }
 
 // Format time to HH:MM
@@ -124,13 +144,22 @@ export async function createEvent(
     const eventId = eventRef.id;
 
     let imageUrl = "";
-    if (formData.imageUri) {
+    let imageUrls: string[] = [];
+
+    // Handle multiple images (new approach)
+    if (formData.imageUris && formData.imageUris.length > 0) {
+      imageUrls = await uploadImages(formData.imageUris, eventId);
+      // Set first image as imageUrl for backward compatibility
+      imageUrl = imageUrls[0] || "";
+    }
+    // Handle single image (legacy approach)
+    else if (formData.imageUri) {
       imageUrl = await uploadImage(formData.imageUri, eventId);
+      imageUrls = [imageUrl];
     }
 
-    const eventData = {
+    const eventData: any = {
       organizerId,
-      imageUrl,
       title: formData.title,
       description: formData.description,
       startDate: formatDate(formData.startDate),
@@ -141,12 +170,21 @@ export async function createEvent(
       type: formData.type,
       category: formData.category,
       fullDayEvent: formData.fullDayEvent,
+      customLabels: formData.customLabels || undefined,
       participantLimit: formData.participantLimit,
       participantCount: 0,
       participants: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Add image fields
+    if (imageUrls.length > 0) {
+      eventData.imageUrls = imageUrls;
+      eventData.imageUrl = imageUrl; // For backward compatibility
+    } else if (imageUrl) {
+      eventData.imageUrl = imageUrl;
+    }
 
     await addDoc(collection(db, "events"), eventData);
     
@@ -241,14 +279,52 @@ export async function updateEvent(
     const existingEvent = existingEventDoc.data() as Event;
     
     let imageUrl = existingImageUrl || "";
+    let imageUrls: string[] = [];
 
-    // Upload new image if provided
-    if (formData.imageUri && formData.imageUri !== existingImageUrl) {
-      // Delete old image if exists
-      if (existingImageUrl) {
-        await deleteImage(existingImageUrl);
+    // Handle multiple images (new approach)
+    if (formData.imageUris && formData.imageUris.length > 0) {
+      // Delete old images if they exist
+      const existingImageUrls = (existingEvent.imageUrls || []) as string[];
+      if (existingImageUrl && !existingImageUrls.includes(existingImageUrl)) {
+        existingImageUrls.push(existingImageUrl);
       }
+      
+      // Delete all old images
+      for (const oldUrl of existingImageUrls) {
+        if (oldUrl) {
+          await deleteImage(oldUrl).catch(err => console.error("Error deleting old image:", err));
+        }
+      }
+
+      // Upload new images
+      imageUrls = await uploadImages(formData.imageUris, eventId);
+      imageUrl = imageUrls[0] || "";
+    }
+    // Handle single image (legacy approach)
+    else if (formData.imageUri && formData.imageUri !== existingImageUrl) {
+      // Delete old images
+      const existingImageUrls = (existingEvent.imageUrls || []) as string[];
+      if (existingImageUrl && !existingImageUrls.includes(existingImageUrl)) {
+        existingImageUrls.push(existingImageUrl);
+      }
+      
+      for (const oldUrl of existingImageUrls) {
+        if (oldUrl) {
+          await deleteImage(oldUrl).catch(err => console.error("Error deleting old image:", err));
+      }
+      }
+
       imageUrl = await uploadImage(formData.imageUri, eventId);
+      imageUrls = [imageUrl];
+    } else {
+      // Keep existing images
+      if ((existingEvent.imageUrls || []).length > 0) {
+        imageUrls = existingEvent.imageUrls as string[];
+        imageUrl = imageUrls[0] || existingImageUrl || "";
+      } else if (existingImageUrl) {
+        imageUrl = existingImageUrl;
+        imageUrls = [existingImageUrl];
+      }
     }
 
     const eventRef = doc(db, "events", eventId);
@@ -270,8 +346,7 @@ export async function updateEvent(
       changes.push({ field: "title", oldValue: existingEvent.title, newValue: formData.title });
     }
 
-    await updateDoc(eventRef, {
-      imageUrl,
+    const updateData: any = {
       title: formData.title,
       description: formData.description,
       startDate: formatDate(formData.startDate),
@@ -282,9 +357,20 @@ export async function updateEvent(
       type: formData.type,
       category: formData.category,
       fullDayEvent: formData.fullDayEvent,
+      customLabels: formData.customLabels || undefined,
       participantLimit: formData.participantLimit,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    // Add image fields
+    if (imageUrls.length > 0) {
+      updateData.imageUrls = imageUrls;
+      updateData.imageUrl = imageUrl; // For backward compatibility
+    } else if (imageUrl) {
+      updateData.imageUrl = imageUrl;
+    }
+
+    await updateDoc(eventRef, updateData);
 
     // Invalidate caches since event was updated
     await invalidateEventCaches(eventId);
@@ -305,14 +391,37 @@ export async function updateEvent(
 }
 
 // Delete event
-export async function deleteEvent(eventId: string, imageUrl: string): Promise<void> {
+export async function deleteEvent(eventId: string, imageUrl?: string): Promise<void> {
   try {
     // Get event data before deleting to send cancellation notification
     const eventDoc = await getDoc(doc(db, "events", eventId));
     const eventData = eventDoc.exists() ? (eventDoc.data() as Event) : null;
 
-    // Delete image from storage
-    if (imageUrl) {
+    // Delete all images from storage
+    if (eventData) {
+      const imageUrls = (eventData.imageUrls || []) as string[];
+      const allImageUrls = [...imageUrls];
+      
+      // Add legacy imageUrl if it exists and not already in array
+      if (eventData.imageUrl && !allImageUrls.includes(eventData.imageUrl)) {
+        allImageUrls.push(eventData.imageUrl);
+      }
+      
+      // Also add provided imageUrl if not in array
+      if (imageUrl && !allImageUrls.includes(imageUrl)) {
+        allImageUrls.push(imageUrl);
+      }
+
+      // Delete all images
+      for (const url of allImageUrls) {
+        if (url) {
+          await deleteImage(url).catch(err => 
+            console.error("Error deleting image:", err)
+          );
+        }
+      }
+    } else if (imageUrl) {
+      // Fallback: delete provided imageUrl if event data not found
       await deleteImage(imageUrl);
     }
 

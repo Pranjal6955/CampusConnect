@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import AboutAppModal from "../../components/AboutAppModal";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import EditProfileModal from "../../components/EditProfileModal";
 import { auth } from "../../config/firebase";
@@ -33,6 +34,7 @@ export default function Profile() {
     // Edit Profile State
     const [showEditModal, setShowEditModal] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+    const [showAboutModal, setShowAboutModal] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -467,19 +469,20 @@ export default function Profile() {
                     className={`text-sm font-bold uppercase tracking-wider mb-4 ml-2 mt-6 ${isDark ? "text-gray-500" : "text-gray-400"
                         }`}
                 >
-                    Support
+                    Legal & Support
                 </Text>
 
                 <MenuOption
-                    icon="help-circle-outline"
-                    title="Help & Support"
-                    onPress={() => { }}
+                    icon="document-text-outline"
+                    title="Privacy Policy"
+                    subtitle="How we handle your data"
+                    onPress={() => router.push("/(organizer)/privacy-policy")}
                 />
 
                 <MenuOption
                     icon="information-circle-outline"
                     title="About App"
-                    onPress={() => { }}
+                    onPress={() => setShowAboutModal(true)}
                 />
 
                 <View className="mt-6">
@@ -514,6 +517,11 @@ export default function Profile() {
             <ChangePasswordModal
                 visible={showChangePasswordModal}
                 onClose={() => setShowChangePasswordModal(false)}
+            />
+
+            <AboutAppModal
+                visible={showAboutModal}
+                onClose={() => setShowAboutModal(false)}
             />
         </View>
     );

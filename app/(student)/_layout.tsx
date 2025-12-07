@@ -118,6 +118,12 @@ export default function StudentLayout() {
           href: null,
         }}
       />
+        <Tabs.Screen
+        name="privacy-policy"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

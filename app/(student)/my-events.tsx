@@ -626,10 +626,33 @@ export default function MyEvents() {
                     {event.description && (
                       <Text
                         numberOfLines={1}
-                        className={`text-sm mb-4 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                        className={`text-sm mb-3 ${isDark ? "text-gray-300" : "text-gray-600"}`}
                       >
                         {event.description}
                       </Text>
+                    )}
+
+                    {/* Custom Labels */}
+                    {(event as any).customLabels && (
+                      <View className="flex-row flex-wrap mb-3" style={{ gap: 6 }}>
+                        {((event as any).customLabels as string).split(",").map((label: string, index: number) => {
+                          const trimmedLabel = label.trim();
+                          if (!trimmedLabel) return null;
+                          return (
+                            <View
+                              key={index}
+                              className="px-2.5 py-1 rounded-full"
+                              style={{
+                                backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.1)",
+                              }}
+                            >
+                              <Text className={`text-xs font-semibold ${isDark ? "text-blue-300" : "text-blue-600"}`}>
+                                {trimmedLabel}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
                     )}
 
                     {/* Date & Time Section */}
@@ -641,22 +664,12 @@ export default function MyEvents() {
                         </View>
                         <View className="flex-1">
                           <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Start</Text>
-                          <View className="flex-row items-center flex-wrap">
                             <Text
                               numberOfLines={1}
                               className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
                             >
                               {formatDateFull(event.startDate)}
                             </Text>
-                            {!event.fullDayEvent && event.startTime && (
-                              <View className="flex-row items-center ml-1">
-                                <Ionicons name="time-outline" size={12} color={isDark ? "#9ca3af" : "#6b7280"} style={{ marginLeft: 4, marginRight: 2 }} />
-                                <Text className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}>
-                                  {formatTimeTo12Hour(event.startTime)}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
                         </View>
                       </View>
 
@@ -667,22 +680,12 @@ export default function MyEvents() {
                         </View>
                         <View className="flex-1">
                           <Text className={`text-xs font-semibold mb-0.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>End</Text>
-                          <View className="flex-row items-center flex-wrap">
                             <Text
                               numberOfLines={1}
                               className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}
                             >
                               {formatDateFull(event.endDate)}
                             </Text>
-                            {!event.fullDayEvent && event.endTime && (
-                              <View className="flex-row items-center ml-1">
-                                <Ionicons name="time-outline" size={12} color={isDark ? "#9ca3af" : "#6b7280"} style={{ marginLeft: 4, marginRight: 2 }} />
-                                <Text className={`text-sm ${isDark ? "text-gray-300" : "text-gray-600"}`}>
-                                  {formatTimeTo12Hour(event.endTime)}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
                         </View>
                       </View>
                     </View>

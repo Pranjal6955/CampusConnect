@@ -59,7 +59,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="scanner"
         options={{
-          title: "Scanner",
+          title: "Check-In Hub",
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -76,7 +76,7 @@ export default function OrganizerLayout() {
               }}
             >
               <Ionicons
-                name={focused ? "qr-code" : "qr-code-outline"}
+                name={focused ? "clipboard" : "clipboard-outline"}
                 size={focused ? 26 : 24}
                 color={color}
               />
@@ -129,9 +129,9 @@ export default function OrganizerLayout() {
         }}
       />
       <Tabs.Screen
-        name="attendance"
+        name="feedback"
         options={{
-          title: "Attendance",
+          title: "Feedback",
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -148,12 +148,18 @@ export default function OrganizerLayout() {
               }}
             >
               <Ionicons
-                name={focused ? "clipboard" : "clipboard-outline"}
+                name={focused ? "chatbubbles" : "chatbubbles-outline"}
                 size={focused ? 26 : 24}
                 color={color}
               />
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="attendance"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -190,6 +196,13 @@ export default function OrganizerLayout() {
           href: null,
         }}
       />
+        <Tabs.Screen
+        name="privacy-policy"
+        options={{
+          href: null,
+        }}
+      />
+      
     </Tabs>
   );
 }

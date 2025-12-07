@@ -46,7 +46,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera to scan QR codes for event attendance."
+          "cameraPermission": "CampusConnect needs camera access to scan QR codes for event attendance and take photos for your profile or event images."
         }
       ],
       [

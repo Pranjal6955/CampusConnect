@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
-import { clearAuthStorage } from "../../utils/auth";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -14,13 +13,14 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import AboutAppModal from "../../components/AboutAppModal";
 import Badge from "../../components/Badge";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import EditProfileModal from "../../components/EditProfileModal";
 import { auth } from "../../config/firebase";
-import { getUserProfile } from "../../utils/user";
+import { clearAuthStorage } from "../../utils/auth";
 import { cancelAllScheduledNotifications } from "../../utils/notifications";
-import { getNotificationPreference, updateNotificationPreference, UpdateUserData, updateUserProfile } from "../../utils/user";
+import { getNotificationPreference, getUserProfile, updateNotificationPreference, UpdateUserData, updateUserProfile } from "../../utils/user";
 
 export default function Profile() {
     const router = useRouter();
@@ -33,6 +33,7 @@ export default function Profile() {
     // Edit Profile State
     const [showEditModal, setShowEditModal] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+    const [showAboutModal, setShowAboutModal] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
 
     const handleUpdateProfile = async (data: UpdateUserData) => {
@@ -367,19 +368,20 @@ export default function Profile() {
                     className={`text-sm font-bold uppercase tracking-wider mb-4 ml-2 mt-6 ${isDark ? "text-gray-500" : "text-gray-400"
                         }`}
                 >
-                    Support
+                    Legal & Support
                 </Text>
 
                 <MenuOption
-                    icon="help-circle-outline"
-                    title="Help & Support"
-                    onPress={() => { }}
+                    icon="document-text-outline"
+                    title="Privacy Policy"
+                    subtitle="How we handle your data"
+                    onPress={() => router.push("/(student)/privacy-policy")}
                 />
 
                 <MenuOption
                     icon="information-circle-outline"
                     title="About App"
-                    onPress={() => { }}
+                    onPress={() => setShowAboutModal(true)}
                 />
 
                 <View className="mt-6">
@@ -416,6 +418,11 @@ export default function Profile() {
             <ChangePasswordModal
                 visible={showChangePasswordModal}
                 onClose={() => setShowChangePasswordModal(false)}
+            />
+
+            <AboutAppModal
+                visible={showAboutModal}
+                onClose={() => setShowAboutModal(false)}
             />
         </View>
     );
