@@ -1,21 +1,25 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { useColorScheme } from "nativewind";
-import { TouchableOpacity, View } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { useColorScheme } from 'nativewind';
+import { TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function OrganizerLayout() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === 'dark';
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#0EA5E9",
-        tabBarInactiveTintColor: isDark ? "#666" : "#999",
+        tabBarActiveTintColor: '#0EA5E9',
+        tabBarInactiveTintColor: isDark ? '#666' : '#999',
         tabBarStyle: {
-          backgroundColor: isDark ? "#000000" : "#ffffff",
-          borderTopColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
+          backgroundColor: isDark ? '#000000' : '#ffffff',
+          borderTopColor: isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.1)',
           borderTopWidth: 1,
           height: 65,
           paddingBottom: 8,
@@ -23,7 +27,7 @@ export default function OrganizerLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: "600",
+          fontWeight: '600',
           marginTop: 4,
         },
       }}
@@ -31,7 +35,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="events"
         options={{
-          title: "Events",
+          title: t('tabs.events'),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -40,15 +44,15 @@ export default function OrganizerLayout() {
                 borderRadius: focused ? 24 : 20,
                 backgroundColor: focused
                   ? isDark
-                    ? "rgba(14, 165, 233, 0.2)"
-                    : "rgba(14, 165, 233, 0.1)"
-                  : "transparent",
-                alignItems: "center",
-                justifyContent: "center",
+                    ? 'rgba(14, 165, 233, 0.2)'
+                    : 'rgba(14, 165, 233, 0.1)'
+                  : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Ionicons
-                name={focused ? "calendar" : "calendar-outline"}
+                name={focused ? 'calendar' : 'calendar-outline'}
                 size={focused ? 26 : 24}
                 color={color}
               />
@@ -59,7 +63,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="scanner"
         options={{
-          title: "Scanner",
+          title: t('tabs.checkInHub'),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -68,15 +72,15 @@ export default function OrganizerLayout() {
                 borderRadius: focused ? 24 : 20,
                 backgroundColor: focused
                   ? isDark
-                    ? "rgba(14, 165, 233, 0.2)"
-                    : "rgba(14, 165, 233, 0.1)"
-                  : "transparent",
-                alignItems: "center",
-                justifyContent: "center",
+                    ? 'rgba(14, 165, 233, 0.2)'
+                    : 'rgba(14, 165, 233, 0.1)'
+                  : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Ionicons
-                name={focused ? "qr-code" : "qr-code-outline"}
+                name={focused ? 'clipboard' : 'clipboard-outline'}
                 size={focused ? 26 : 24}
                 color={color}
               />
@@ -87,7 +91,7 @@ export default function OrganizerLayout() {
       <Tabs.Screen
         name="quick-create"
         options={{
-          title: "",
+          title: '',
           tabBarButton: (props) => {
             const { onPress, accessibilityState, accessibilityLabel } = props;
             return (
@@ -98,8 +102,8 @@ export default function OrganizerLayout() {
                 activeOpacity={0.8}
                 style={{
                   flex: 1,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   top: -25,
                 }}
               >
@@ -108,16 +112,16 @@ export default function OrganizerLayout() {
                     width: 68,
                     height: 68,
                     borderRadius: 34,
-                    backgroundColor: "#0EA5E9",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    shadowColor: "#0EA5E9",
+                    backgroundColor: '#0EA5E9',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#0EA5E9',
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.5,
                     shadowRadius: 12,
                     elevation: 12,
                     borderWidth: 4,
-                    borderColor: isDark ? "#000000" : "#ffffff",
+                    borderColor: isDark ? '#000000' : '#ffffff',
                   }}
                 >
                   <Ionicons name="add" size={36} color="#fff" />
@@ -129,9 +133,9 @@ export default function OrganizerLayout() {
         }}
       />
       <Tabs.Screen
-        name="attendance"
+        name="feedback"
         options={{
-          title: "Attendance",
+          title: t('tabs.feedback'),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -140,15 +144,15 @@ export default function OrganizerLayout() {
                 borderRadius: focused ? 24 : 20,
                 backgroundColor: focused
                   ? isDark
-                    ? "rgba(14, 165, 233, 0.2)"
-                    : "rgba(14, 165, 233, 0.1)"
-                  : "transparent",
-                alignItems: "center",
-                justifyContent: "center",
+                    ? 'rgba(14, 165, 233, 0.2)'
+                    : 'rgba(14, 165, 233, 0.1)'
+                  : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Ionicons
-                name={focused ? "clipboard" : "clipboard-outline"}
+                name={focused ? 'chatbubbles' : 'chatbubbles-outline'}
                 size={focused ? 26 : 24}
                 color={color}
               />
@@ -157,9 +161,15 @@ export default function OrganizerLayout() {
         }}
       />
       <Tabs.Screen
+        name="attendance"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, focused, size }) => (
             <View
               style={{
@@ -168,15 +178,15 @@ export default function OrganizerLayout() {
                 borderRadius: focused ? 24 : 20,
                 backgroundColor: focused
                   ? isDark
-                    ? "rgba(14, 165, 233, 0.2)"
-                    : "rgba(14, 165, 233, 0.1)"
-                  : "transparent",
-                alignItems: "center",
-                justifyContent: "center",
+                    ? 'rgba(14, 165, 233, 0.2)'
+                    : 'rgba(14, 165, 233, 0.1)'
+                  : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Ionicons
-                name={focused ? "person" : "person-outline"}
+                name={focused ? 'person' : 'person-outline'}
                 size={focused ? 26 : 24}
                 color={color}
               />
@@ -190,7 +200,12 @@ export default function OrganizerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="privacy-policy"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
-

@@ -1,8 +1,9 @@
-import { BlurView } from "expo-blur";
-import { Ionicons } from "@expo/vector-icons";
-import { useColorScheme } from "nativewind";
-import { useEffect, useRef } from "react";
-import { Animated, Modal, Text, TouchableOpacity, View } from "react-native";
+import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
+import { useEffect, useRef } from 'react';
+import { Animated, Modal, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface SuccessAnimationProps {
   visible: boolean;
@@ -14,11 +15,15 @@ interface SuccessAnimationProps {
 export default function SuccessAnimation({
   visible,
   onClose,
-  message = "Successfully joined the event!",
-  title = "You're In!",
+  message,
+  title,
 }: SuccessAnimationProps) {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === 'dark';
+
+  const displayMessage = message || t('events.joinSuccessMessage');
+  const displayTitle = title || t('events.joinSuccessTitle');
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -93,15 +98,15 @@ export default function SuccessAnimation({
       <View style={{ flex: 1 }}>
         <BlurView
           intensity={100}
-          tint={isDark ? "dark" : "light"}
+          tint={isDark ? 'dark' : 'light'}
           style={{
-            position: "absolute",
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            width: "100%",
-            height: "100%",
+            width: '100%',
+            height: '100%',
           }}
         />
         <Animated.View
@@ -114,7 +119,7 @@ export default function SuccessAnimation({
             activeOpacity={1}
             onPress={handleClose}
             style={{
-              position: "absolute",
+              position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
@@ -127,10 +132,10 @@ export default function SuccessAnimation({
             }}
           >
             <View
-              className={`rounded-2xl p-8 items-center ${isDark ? "bg-gray-900" : "bg-white"}`}
+              className={`rounded-2xl p-8 items-center ${isDark ? 'bg-gray-900' : 'bg-white'}`}
               style={{
                 minWidth: 280,
-                shadowColor: "#000",
+                shadowColor: '#000',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.2,
                 shadowRadius: 12,
@@ -146,7 +151,7 @@ export default function SuccessAnimation({
                 <View
                   className="w-16 h-16 rounded-full items-center justify-center mb-4"
                   style={{
-                    backgroundColor: "#22c55e",
+                    backgroundColor: '#22c55e',
                   }}
                 >
                   <Ionicons name="checkmark" size={32} color="#fff" />
@@ -155,16 +160,16 @@ export default function SuccessAnimation({
 
               {/* Title */}
               <Text
-                className={`text-xl font-bold mb-2 text-center ${isDark ? "text-white" : "text-gray-900"}`}
+                className={`text-xl font-bold mb-2 text-center ${isDark ? 'text-white' : 'text-gray-900'}`}
               >
-                {title}
+                {displayTitle}
               </Text>
 
               {/* Message */}
               <Text
-                className={`text-sm text-center mb-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                className={`text-sm text-center mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
               >
-                {message}
+                {displayMessage}
               </Text>
 
               {/* Close Button */}
@@ -172,10 +177,12 @@ export default function SuccessAnimation({
                 onPress={handleClose}
                 className="px-6 py-2.5 rounded-lg"
                 style={{
-                  backgroundColor: "#22c55e",
+                  backgroundColor: '#22c55e',
                 }}
               >
-                <Text className="text-white font-semibold text-sm">OK</Text>
+                <Text className="text-white font-semibold text-sm">
+                  {t('common.ok')}
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
